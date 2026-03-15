@@ -85,7 +85,7 @@ $modx->log(modX::LOG_LEVEL_INFO, 'Packaged category and file vehicles.');
 $builder->setPackageAttributes([
     'license' => file_get_contents($config['repo_root'] . '/LICENSE.md'),
     'readme' => file_get_contents($config['repo_root'] . '/README.md'),
-    'changelog' => file_get_contents(__DIR__ . '/docs/changelog.txt'),
+    'changelog' => file_get_contents($config['repo_root'] . '/CHANGELOG.md'),
 ]);
 
 $builder->pack();

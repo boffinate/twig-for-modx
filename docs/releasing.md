@@ -26,11 +26,10 @@ For a normal release, increment `version` and leave `release` as `pl` unless you
 
 ## Update The Changelog
 
-Add the new release at the top of `_build/docs/changelog.txt`:
+Add the new release at the top of `CHANGELOG.md`:
 
-```text
-Twig 0.2.1-pl
-====================
+```markdown
+## 0.2.1-pl
 
 - Describe the release here
 ```
@@ -81,7 +80,7 @@ After building, check:
 1. `_build/build.config.php` has the version you meant to release.
 2. `core/packages/twig-<version>-pl.transport.zip` exists.
 3. `core/packages/twig-<version>-pl/manifest.php` contains `readme`, `license`, and `changelog`.
-4. The changelog entry in `_build/docs/changelog.txt` matches the package version.
+4. The changelog entry in `CHANGELOG.md` matches the package version.
 
 For the targeted packaging regression test, run:
 
