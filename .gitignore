@@ -3,6 +3,9 @@
 /core/components/twig/.php-cs-fixer.cache
 /.backup/
 
+# MkDocs build output
+/site/
+
 # Local OS/editor noise
 .DS_Store
 Thumbs.db

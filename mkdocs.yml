@@ -1,0 +1,40 @@
+site_name: Twig for MODX
+site_description: Use Twig syntax inside MODX templates, chunks, and ContentBlocks fields.
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - toc.integrate
+
+nav:
+  - Getting Started: usage.md
+  - ContentBlocks: contentblocks.md
+  - Developer Guide: developer-guide.md
+  - Troubleshooting: troubleshooting.md
+
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - toc:
+      permalink: true
