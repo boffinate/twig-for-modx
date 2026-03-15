@@ -5,9 +5,11 @@ namespace Boffinate\Twig;
 
 use Boffinate\Twig\Extension\ModxExtension;
 use Boffinate\Twig\Proxy\modChunkTwig;
+use Boffinate\Twig\Proxy\ResourceAccessor;
 use Boffinate\Twig\Support\ModxRuntime;
 use MODX\Revolution\modChunk;
 use MODX\Revolution\modParser;
+use MODX\Revolution\modResource;
 use MODX\Revolution\modX;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
@@ -201,8 +203,16 @@ class Twig extends modParser
     private function syncGlobals(): void
     {
         $this->twig->addGlobal('modx', $this->modx);
+        $this->twig->addGlobal('resource', $this->wrapResource());
         $this->twig->addGlobal('placeholders', $this->modx->placeholders ?? []);
         $this->twig->addGlobal('modx_runtime', $this->getRuntime());
+    }
+
+    private function wrapResource(): ?ResourceAccessor
+    {
+        $resource = $this->modx->resource;
+
+        return $resource instanceof modResource ? new ResourceAccessor($resource) : null;
     }
 
     private function applyInitializers(): void

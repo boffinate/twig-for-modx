@@ -121,6 +121,75 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame('Field Resource | Twig Hero | fallback', $this->processContent($content));
     }
 
+    public function test_resource_global_exposes_built_in_fields(): void
+    {
+        $resource = $this->registerResource([
+            'pagetitle' => 'Global Resource',
+            'alias' => 'global-resource',
+        ]);
+        $this->modx->resource = $this->modx->getObject(\MODX\Revolution\modResource::class, (int) $resource->get('id'));
+
+        $content = '{{ resource.pagetitle }} | {{ resource.alias }}';
+
+        $this->assertSame('Global Resource | global-resource', $this->processContent($content));
+    }
+
+    public function test_resource_global_exposes_template_variables(): void
+    {
+        $this->registerTemplateVar('HeroTitle');
+        $resource = $this->registerResource([
+            'pagetitle' => 'TV Resource',
+        ]);
+        $this->assignTemplateVarValue($resource, 'HeroTitle', 'Twig Hero');
+        $this->modx->resource = $this->modx->getObject(\MODX\Revolution\modResource::class, (int) $resource->get('id'));
+
+        $this->assertSame('Twig Hero', $this->processContent('{{ resource.HeroTitle }}'));
+    }
+
+    public function test_resource_global_is_null_when_no_resource_set(): void
+    {
+        $this->modx->resource = null;
+
+        $this->assertSame('none', $this->processContent('{{ resource.pagetitle|default("none") }}'));
+    }
+
+    public function test_resource_global_tv_raw_value(): void
+    {
+        $this->registerTemplateVar('HeroTitle');
+        $resource = $this->registerResource([
+            'pagetitle' => 'Raw TV Resource',
+        ]);
+        $this->assignTemplateVarValue($resource, 'HeroTitle', 'Raw Value');
+        $this->modx->resource = $this->modx->getObject(\MODX\Revolution\modResource::class, (int) $resource->get('id'));
+
+        $this->assertSame('Raw Value', $this->processContent('{{ resource.tvRawValue("HeroTitle") }}'));
+    }
+
+    public function test_resource_global_caches_tv_lookups(): void
+    {
+        $this->registerTemplateVar('CachedTV');
+        $resource = $this->registerResource([
+            'pagetitle' => 'Cache Resource',
+        ]);
+        $this->assignTemplateVarValue($resource, 'CachedTV', 'Cached');
+        $this->modx->resource = $this->modx->getObject(\MODX\Revolution\modResource::class, (int) $resource->get('id'));
+
+        // Accessing the same TV twice should return consistent results (cache hit on second access)
+        $this->assertSame('Cached Cached', $this->processContent('{{ resource.CachedTV }} {{ resource.CachedTV }}'));
+    }
+
+    public function test_resource_global_matches_modx_resource(): void
+    {
+        $resource = $this->registerResource([
+            'pagetitle' => 'Match Resource',
+        ]);
+        $this->modx->resource = $this->modx->getObject(\MODX\Revolution\modResource::class, (int) $resource->get('id'));
+
+        $content = '{{ resource.pagetitle }} {{ modx.resource.pagetitle }}';
+
+        $this->assertSame('Match Resource Match Resource', $this->processContent($content));
+    }
+
     public function test_modx_template_with_invalid_twig_syntax_throws(): void
     {
         $this->expectException(SyntaxError::class);
