@@ -14,8 +14,7 @@ Twig is evaluated before the final MODX tag pass. After Twig renders, MODX still
 
 ## Installation
 
-1. Install **PdoTools** first. The Twig Extra depends on it and will not load without it.
-2. Install the Twig transport package through the MODX package manager.
+1. Install the Twig transport package through the MODX package manager.
 3. The installer creates a `twig` namespace pointing to `{core_path}components/twig/`.
 4. The `twigparser` service is now available site-wide.
 

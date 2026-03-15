@@ -26,8 +26,11 @@ Use Twig template syntax inside MODX templates, chunks, resources, and ContentBl
 ## Requirements
 
 - MODX 3
-- [PdoTools](https://docs.modx.pro/components/pdotools/)
 - Twig 3 (bundled with the extra)
+
+## Optional Extras
+
+- [PdoTools](https://docs.modx.pro/components/pdotools/) -- if installed, its services (chunk rendering, Fenom, pdoFetch) continue to work alongside Twig. Not required.
 
 ## Supported Extras
 

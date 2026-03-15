@@ -103,13 +103,11 @@ See [HTML Escaping](./usage.md#html-escaping) for details.
 
 **Fix:** This normally works automatically. If it does not, check that the snippet is returning a string (not echoing it), and that the Twig parser is active (the `twig` namespace is registered and the bootstrap loaded).
 
-### PdoTools not found error
+### PdoTools not installed
 
-**Symptom:** Error about `pdotools` service not being available, or the bootstrap fails.
+**Symptom:** You want to use PdoTools features (Fenom templates, pdoFetch, FastField tags) alongside Twig.
 
-**Cause:** PdoTools is not installed. The Twig Extra depends on it.
-
-**Fix:** Install PdoTools through the MODX package manager before installing the Twig Extra.
+**Note:** PdoTools is optional. The Twig Extra works without it. If you need PdoTools features, install it through the MODX package manager. Both extras coexist without conflict -- see [How It Works](how-it-works.md) for details.
 
 ## Coming from MODX Tags
 
