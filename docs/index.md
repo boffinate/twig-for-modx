@@ -25,5 +25,9 @@ Use Twig template syntax inside MODX templates, chunks, resources, and ContentBl
 ## Requirements
 
 - MODX 3
-- PdoTools
+- [PdoTools](https://docs.modx.pro/components/pdotools/)
 - Twig 3 (bundled with the extra)
+
+## Supported Extras
+
+- [ContentBlocks](https://www.modmore.com/contentblocks/) -- use Twig syntax in field and repeater templates. See the [ContentBlocks guide](contentblocks.md).
