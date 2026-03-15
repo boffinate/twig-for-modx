@@ -2,3 +2,7 @@
 /core/components/twig/.phpunit.result.cache
 /core/components/twig/.php-cs-fixer.cache
 /.backup/
+
+# Local OS/editor noise
+.DS_Store
+Thumbs.db
