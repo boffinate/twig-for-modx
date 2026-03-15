@@ -4,8 +4,9 @@ Standalone MODX Extra repository for the Twig integration component.
 
 ## User Documentation
 
-- [Using the Twig Extra](./docs/usage.md) -- setup, built-in functions, globals, custom extensions
+- [Using the Twig Extra](./docs/usage.md) -- setup, built-in functions, globals, escaping, custom extensions
 - [Using Twig with ContentBlocks](./docs/contentblocks.md) -- field templates, repeaters, the `row_data` variable
+- [Troubleshooting](./docs/troubleshooting.md) -- common mistakes, error handling, MODX-to-Twig migration cheat sheet
 
 ## Development
 

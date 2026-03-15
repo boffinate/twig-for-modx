@@ -14,11 +14,14 @@ Twig is evaluated before the final MODX tag pass. After Twig renders, MODX still
 
 ## Installation
 
-1. Install the transport package through the MODX package manager.
-2. The installer creates a `twig` namespace pointing to `{core_path}components/twig/`.
-3. The `twigparser` service is now available site-wide.
+1. Install **PdoTools** first. The Twig Extra depends on it and will not load without it.
+2. Install the Twig transport package through the MODX package manager.
+3. The installer creates a `twig` namespace pointing to `{core_path}components/twig/`.
+4. The `twigparser` service is now available site-wide.
 
 No other configuration is needed. The extra activates automatically.
+
+This extra uses **Twig 3** (the [Twig 3.x documentation](https://twig.symfony.com/doc/3.x/) is the right reference for syntax, filters, and functions).
 
 ## Where Twig Syntax Works
 
@@ -162,6 +165,33 @@ All standard Twig filters work. Some commonly useful ones:
 {{ date_string|date('d/m/Y') }}
 ```
 
+## HTML Escaping
+
+Twig auto-escapes all output by default. This is a security feature that prevents XSS attacks, but it means HTML content comes out as visible tags if you are not expecting it.
+
+```twig
+{# Variable contains: <p>Hello <strong>world</strong></p> #}
+
+{{ value }}       {# outputs: &lt;p&gt;Hello &lt;strong&gt;world&lt;/strong&gt;&lt;/p&gt; #}
+{{ value|raw }}   {# outputs: <p>Hello <strong>world</strong></p> #}
+```
+
+Use the `|raw` filter when you know the content is safe HTML that should be rendered as markup. This is common with:
+
+- richtext field content from ContentBlocks
+- chunk output that contains HTML
+- snippet output that returns HTML
+- MODX resource fields like `content` or `introtext`
+
+```twig
+{{ field('content')|raw }}
+{{ chunk('HeroBanner', {'title': 'Welcome'})|raw }}
+```
+
+Do not use `|raw` on user-supplied input that has not been sanitised.
+
+When in doubt, leave auto-escaping on. Only add `|raw` when you see escaped HTML appearing as text on the page.
+
 ## Twig Control Structures
 
 ### Conditionals
@@ -219,6 +249,37 @@ You can also call MODX elements through the Twig functions instead of tags:
 ```
 
 Both approaches work. Choose whichever is clearer for your template.
+
+### Processing order
+
+Understanding the order of operations prevents surprises:
+
+1. **Twig runs first.** All `{{ }}`, `{% %}`, and `{# #}` blocks are evaluated and replaced with their output.
+2. **MODX runs second.** The result from step 1 is then processed by the MODX parser, which handles `[[tags]]`.
+
+This means:
+
+- **Twig can wrap MODX tags in conditionals.** The MODX tag is only present in the output if the condition is true, so MODX only processes it when needed.
+- **Twig cannot read MODX tag output.** By the time MODX processes `[[*pagetitle]]`, Twig has already finished. You cannot use `{% if [[*pagetitle]] == 'Home' %}` -- use `{% if field('pagetitle') == 'Home' %}` instead.
+- **MODX snippet output containing Twig is rendered.** If a snippet returns a string with `{{ }}` syntax, it goes through the Twig pass. This is intentional and useful for snippets that return Twig-powered markup.
+- **Twig variables cannot be interpolated into MODX tags.** `[[*{{ fieldname }}]]` does not work because Twig processes `{{ fieldname }}` first, but the result is just text that gets concatenated into the MODX tag string. Use the `field()` helper instead.
+
+### JavaScript frameworks and verbatim
+
+Vue, Angular, Alpine.js, Handlebars, and other frontend frameworks also use `{{ }}` syntax. Twig will try to parse those expressions and throw an error.
+
+Wrap frontend template blocks in `{% verbatim %}` to tell Twig to leave them alone:
+
+```twig
+{% verbatim %}
+<div id="app">
+    <p>{{ message }}</p>
+    <span v-if="show">{{ count }} items</span>
+</div>
+{% endverbatim %}
+```
+
+Everything inside `{% verbatim %}...{% endverbatim %}` is output as-is without Twig processing.
 
 ## Custom Twig Functions
 
