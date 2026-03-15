@@ -278,6 +278,7 @@ abstract class ParserTestCase extends MODxTestCase
 
         $runner = \Closure::bind(function (string $path, array $variables) {
             extract($variables, EXTR_SKIP);
+            $modx = $this->modx;
 
             return require $path;
         }, $plugin, $plugin);
