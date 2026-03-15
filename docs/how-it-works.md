@@ -1,13 +1,13 @@
 # How It Works
 
-This page explains how the Twig extra integrates with the MODX parser system and how it coexists with other extras like PDOTools and ContentBlocks.
+This page explains how the Twig extra integrates with the MODX parser system and how it coexists with other extras like pdoTools and ContentBlocks.
 
 ## Architecture overview
 
-The Twig extra does **not** replace the MODX parser. It registers a separate service called `twigparser` that other code can use to render Twig templates. The global `$modx->parser` stays as whatever was configured (core `modParser`, or PDOTools' `Parser` if PDOTools is installed).
+The Twig extra does **not** replace the MODX parser. It registers a separate service called `twigparser` that other code can use to render Twig templates. The global `$modx->parser` stays as whatever was configured (core `modParser`, or pdoTools' `Parser` if pdoTools is installed).
 
 ```
-$modx->parser          → modParser (or PDOTools Parser)   — handles MODX tags
+$modx->parser          → modParser (or pdoTools Parser)   — handles MODX tags
 $modx->services        → 'twigparser' service             — handles Twig rendering
 ```
 
@@ -40,17 +40,17 @@ Twig is not called automatically during page rendering. It is invoked explicitly
 
 When the Twig parser processes a chunk (via `getElement()`), it wraps the chunk in a `modChunkTwig` proxy. This proxy renders the chunk's content through Twig before returning output, so chunks can contain Twig syntax alongside standard MODX placeholders.
 
-## Relationship with PDOTools
+## Relationship with pdoTools
 
-The Twig extra does **not** depend on PDOTools. It works whether PDOTools is installed or not.
+The Twig extra does **not** depend on pdoTools. It works whether pdoTools is installed or not.
 
-When PDOTools is installed:
+When pdoTools is installed:
 
-- PDOTools may register its own parser as `$modx->parser`, adding Fenom template support and FastField tags (`[[#123.pagetitle]]`).
-- The Twig `twigparser` service operates independently. It does not interfere with PDOTools' parser or its Fenom processing.
-- PDOTools' other services (`pdoFetch`, `CoreTools`, `getChunk()`) continue to work normally.
+- pdoTools may register its own parser as `$modx->parser`, adding Fenom template support and FastField tags (`[[#123.pagetitle]]`).
+- The Twig `twigparser` service operates independently. It does not interfere with pdoTools' parser or its Fenom processing.
+- pdoTools' other services (`pdoFetch`, `CoreTools`, `getChunk()`) continue to work normally.
 
-When PDOTools is not installed:
+When pdoTools is not installed:
 
 - The core `modParser` handles MODX tags.
 - The Twig `twigparser` service works the same way.
@@ -59,10 +59,10 @@ When PDOTools is not installed:
 
 Twig and Fenom are both template engines, but they serve the Twig extra differently:
 
-- **Fenom** (via PDOTools) processes templates during the main MODX parser cycle. It is active when PDOTools is installed and the `pdotools_fenom_parser` setting is enabled.
+- **Fenom** (via pdoTools) processes templates during the main MODX parser cycle. It is active when pdoTools is installed and the `pdotools_fenom_parser` setting is enabled.
 - **Twig** processes templates when explicitly invoked via the `twigparser` service. It does not replace or interfere with Fenom.
 
-If a site uses both PDOTools and Twig, they operate in separate contexts. The global parser handles Fenom (if enabled), while the `twigparser` service handles Twig rendering where it is called.
+If a site uses both pdoTools and Twig, they operate in separate contexts. The global parser handles Fenom (if enabled), while the `twigparser` service handles Twig rendering where it is called.
 
 ## Relationship with ContentBlocks
 

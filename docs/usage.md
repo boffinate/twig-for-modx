@@ -289,7 +289,7 @@ Understanding the order of operations prevents surprises:
 
 1. **Twig runs first.** All `{{ }}`, `{% %}`, and `{# #}` blocks are evaluated and replaced with their output.
 2. **MODX runs second.** The result from step 1 is then processed by the MODX parser, which handles `[[tags]]`.
-3. **Fenom runs last** (only if PdoTools is installed and the `pdotools_fenom_parser` setting is enabled). Any `{$var}` or other Fenom syntax in the output is processed after both Twig and MODX tags have been resolved.
+3. **Fenom runs last** (only if pdoTools is installed and the `pdotools_fenom_parser` setting is enabled). Any `{$var}` or other Fenom syntax in the output is processed after both Twig and MODX tags have been resolved.
 
 This means:
 

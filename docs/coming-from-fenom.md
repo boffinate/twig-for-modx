@@ -1,10 +1,10 @@
 # Coming from Fenom
 
-If you have been using PdoTools' Fenom syntax (`{$_modx->...}`, `{$_pls}`, etc.) and are switching to Twig, this guide maps Fenom patterns to their Twig equivalents.
+If you have been using pdoTools' Fenom syntax (`{$_modx->...}`, `{$_pls}`, etc.) and are switching to Twig, this guide maps Fenom patterns to their Twig equivalents.
 
 ## Key Differences
 
-- **Fenom** is processed by PdoTools during the main MODX parser cycle. It uses `{curly brace}` syntax.
+- **Fenom** is processed by pdoTools during the main MODX parser cycle. It uses `{curly brace}` syntax.
 - **Twig** is processed by the Twig extra before MODX tags. It uses `{{ double brace }}` and `{% block %}` syntax.
 - Both can coexist on the same site. Twig renders first, then MODX tags, then Fenom last. See [How It Works](./how-it-works.md) for details.
 
@@ -23,7 +23,7 @@ If you have been using PdoTools' Fenom syntax (`{$_modx->...}`, `{$_pls}`, etc.)
 
 ### Template Variables
 
-Fenom does not provide direct TV access on the resource object. PdoTools uses FastField tags (`{$_modx->resource.tv_name}` does not work for TVs in Fenom).
+Fenom does not provide direct TV access on the resource object. pdoTools uses FastField tags (`{$_modx->resource.tv_name}` does not work for TVs in Fenom).
 
 Twig unifies resource fields and TVs on the `resource` global:
 
