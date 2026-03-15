@@ -1,3 +1,11 @@
+Twig 0.2.0-pl
+====================
+
+- Remove hard dependency on PDOTools; Twig now extends modParser directly
+- Twig extra works whether PDOTools is installed or not
+- PDOTools services and Fenom processing remain unaffected
+- Add how-it-works documentation explaining the architecture
+
 Twig 0.1.2-pl
 ====================
 
