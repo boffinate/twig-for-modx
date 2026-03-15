@@ -28,6 +28,7 @@ nav:
   - Getting Started: usage.md
   - ContentBlocks: contentblocks.md
   - Developer Guide: developer-guide.md
+  - Releasing: releasing.md
   - Troubleshooting: troubleshooting.md
 
 markdown_extensions:

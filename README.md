@@ -13,6 +13,7 @@ Standalone MODX Extra repository for the Twig integration component.
 **For PHP developers building extras:**
 
 - [Developer Guide](./docs/developer-guide.md) -- rendering Twig from PHP, registering functions and extensions, the shared runtime, event integration, testing, API reference
+- [Releasing](./docs/releasing.md) -- incrementing the package version, updating the changelog, building the transport zip
 
 ## Development
 
@@ -47,7 +48,7 @@ composer install --working-dir=core/components/twig
 
 That command:
 
-- builds `twig-0.1.3-pl.transport.zip`
+- builds `twig-<version>-pl.transport.zip`
 - writes it to `/var/www/html/core/packages/`
 - reinstalls the package into the local MODX database
 - skips file copying when the live component path is symlinked to this repo

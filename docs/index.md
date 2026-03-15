@@ -21,6 +21,7 @@ Use Twig template syntax inside MODX templates, chunks, resources, and ContentBl
 **For PHP developers building extras:**
 
 - [Developer Guide](developer-guide.md) -- rendering from PHP, custom functions, the shared runtime, event integration, testing, API reference
+- [Releasing](releasing.md) -- version bumps, changelog updates, transport package build and verification
 
 ## Requirements
 

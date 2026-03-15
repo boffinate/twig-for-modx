@@ -1,6 +1,8 @@
 # Building The Twig Transport Package
 
-This note captures the packaging issues already hit in this repo so they do not get reintroduced.
+This note captures build and packaging pitfalls already hit in this repo so they do not get reintroduced.
+
+For the release checklist and version bump flow, see [docs/releasing.md](./docs/releasing.md).
 
 ## Working Build Flow
 
@@ -97,26 +99,15 @@ One failure already seen was an older MODX manager JS bug in the target site:
 
 That breaks the package-before-install tabs before the README can render. It is a host MODX manager issue, not a Twig transport metadata issue.
 
-## Quick Verification Checklist
+## Package Sanity Checks
 
-After building:
+If a build or install looks wrong, check:
 
-1. Confirm the zip exists in `core/packages/`.
-2. Confirm the extracted package exists in `core/packages/twig-<version>-pl/`.
-3. Inspect the category vehicle and ensure the file resolvers use `"name":"twig"`, not `"name":"components"`.
-4. Confirm `manifest.php` contains `readme`, `license`, and `changelog`.
-5. Run the targeted regression test:
+1. `core/packages/twig-<version>-pl.transport.zip` exists.
+2. `core/packages/twig-<version>-pl/manifest.php` contains `readme`, `license`, and `changelog`.
+3. The category vehicle uses `"name":"twig"`, not `"name":"components"`, in the file resolver definitions.
+4. The targeted regression test still passes:
 
 ```bash
 ./core/vendor/bin/phpunit -c _build/test/phpunit.xml _build/test/Tests/Transport/TwigExtraBuildConfigTest.php
 ```
-
-## Version Bump Checklist
-
-When releasing a new package version, update:
-
-- `extras/twig-extra/_build/build.config.php`
-- `extras/twig-extra/_build/docs/changelog.txt`
-- `extras/twig-extra/README.md`
-
-Then rebuild the transport package.
