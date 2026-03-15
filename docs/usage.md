@@ -1,0 +1,325 @@
+# Using the Twig Extra
+
+## What It Does
+
+The Twig Extra adds Twig template syntax to your normal MODX workflow. It does not replace MODX rendering. Instead it runs a Twig pass inside the existing MODX parser cycle, so you can mix Twig expressions with standard MODX tags in templates, chunks, resources, and snippet output.
+
+```html
+<h1>{{ field("pagetitle")|upper }}</h1>
+<p>[[*introtext]]</p>
+{{ chunk('HeroCta', {'label': 'Buy now'}) }}
+```
+
+Twig is evaluated before the final MODX tag pass. After Twig renders, MODX still processes its own tags (`[[*pagetitle]]`, `[[+placeholder]]`, `[[Snippet]]`, `[[$Chunk]]`).
+
+## Installation
+
+1. Install the transport package through the MODX package manager.
+2. The installer creates a `twig` namespace pointing to `{core_path}components/twig/`.
+3. The `twigparser` service is now available site-wide.
+
+No other configuration is needed. The extra activates automatically.
+
+## Where Twig Syntax Works
+
+Twig syntax is processed in:
+
+- **Templates** - your MODX page templates
+- **Chunks** - both when called via `[[$ChunkName]]` and via the `chunk()` Twig function
+- **Resource content** - the content field of any resource
+- **Snippet output** - if a snippet returns a string containing Twig syntax, it gets rendered
+- **ContentBlocks fields** - when the ContentBlocks plugin is enabled (see the [ContentBlocks guide](./contentblocks.md))
+
+Twig is not processed in the MODX manager interface.
+
+## Built-in Functions
+
+The extra provides functions that bridge Twig templates to MODX features.
+
+### chunk(name, properties)
+
+Renders a MODX chunk. Properties are passed as chunk placeholders.
+
+```twig
+{{ chunk('CardTpl', {'title': 'My Card', 'image': '/img/card.jpg'}) }}
+```
+
+The chunk itself can also contain Twig syntax.
+
+### snippet(name, properties)
+
+Runs a MODX snippet and outputs the result.
+
+```twig
+{{ snippet('SiteNav', {'depth': 2, 'startId': 0}) }}
+```
+
+### placeholder(key, default) / ph(key, default)
+
+Reads a MODX placeholder. Returns the default if the placeholder is not set.
+
+```twig
+{{ placeholder('page_header', 'Welcome') }}
+{{ ph('page_header') }}
+```
+
+### option(key, default) / config(key, default)
+
+Reads a MODX system setting.
+
+```twig
+{{ option('site_name') }}
+{{ config('site_url') }}
+```
+
+### lexicon(key, params, language)
+
+Returns a lexicon string. The lexicon topic must already be loaded.
+
+```twig
+{{ lexicon('setting_site_name') }}
+```
+
+### trans(key, topic, params, language)
+
+Loads a lexicon topic and translates in one call.
+
+```twig
+{{ trans('setting_site_name', 'en:setting') }}
+```
+
+### link(id, params, context, scheme, options)
+
+Generates a URL for a MODX resource.
+
+```twig
+<a href="{{ link(12) }}">About Us</a>
+<a href="{{ link(5, {'sort': 'date'}) }}">Blog</a>
+```
+
+### field(name, default, resource)
+
+Reads a resource field or Template Variable from the current resource. Falls back to the default if the field is empty.
+
+```twig
+{{ field('pagetitle') }}
+{{ field('HeroImage', '/images/fallback.jpg') }}
+```
+
+You can also pass a hash for named parameters:
+
+```twig
+{{ field({'name': 'CustomTV', 'default': 'none', 'resource': 42}) }}
+```
+
+## Global Variables
+
+Three globals are available in every Twig template:
+
+### modx
+
+The MODX instance. Use it to access resource fields directly.
+
+```twig
+{{ modx.resource.id }}
+{{ modx.resource.pagetitle }}
+{{ modx.resource.parent }}
+```
+
+Use `modx` sparingly. The helper functions are usually clearer.
+
+### placeholders
+
+An array of all currently set MODX placeholders.
+
+```twig
+{{ placeholders.hero_title|default('No title') }}
+```
+
+### modx_runtime
+
+The shared runtime helper. Gives access to all the built-in functions as methods. Useful in edge cases but rarely needed in templates since the standalone functions are more readable.
+
+```twig
+{{ modx_runtime.option('site_url') }}
+```
+
+## Twig Filters
+
+All standard Twig filters work. Some commonly useful ones:
+
+```twig
+{{ title|upper }}
+{{ title|lower }}
+{{ title|capitalize }}
+{{ description|default('No description available') }}
+{{ content|raw }}
+{{ price|number_format(2, '.', ',') }}
+{{ items|length }}
+{{ html_content|striptags }}
+{{ name|trim }}
+{{ list|join(', ') }}
+{{ date_string|date('d/m/Y') }}
+```
+
+## Twig Control Structures
+
+### Conditionals
+
+```twig
+{% if field('HeroImage') %}
+    <img src="{{ field('HeroImage') }}" alt="{{ field('pagetitle') }}">
+{% else %}
+    <div class="placeholder">No image</div>
+{% endif %}
+```
+
+### Loops
+
+```twig
+{% set items = ['Home', 'About', 'Contact'] %}
+<nav>
+{% for item in items %}
+    <a href="#">{{ item }}</a>
+{% endfor %}
+</nav>
+```
+
+### Setting Variables
+
+```twig
+{% set site = option('site_name') %}
+{% set year = 'now'|date('Y') %}
+<footer>&copy; {{ year }} {{ site }}</footer>
+```
+
+## Mixing MODX Tags and Twig
+
+Twig and MODX tags work together in the same template. Twig runs first, then MODX processes its tags in the output.
+
+```twig
+{# Twig handles the logic #}
+{% if modx.resource.parent == 5 %}
+    <nav>[[!SiteNav? &startId=`5`]]</nav>
+{% endif %}
+
+{# MODX handles the content #}
+<h1>[[*pagetitle]]</h1>
+<div>[[*content]]</div>
+```
+
+You can also call MODX elements through the Twig functions instead of tags:
+
+```twig
+{% if modx.resource.parent == 5 %}
+    <nav>{{ snippet('SiteNav', {'startId': 5}) }}</nav>
+{% endif %}
+
+<h1>{{ field('pagetitle') }}</h1>
+```
+
+Both approaches work. Choose whichever is clearer for your template.
+
+## Custom Twig Functions
+
+### Initializers
+
+Register a function directly on the Twig environment:
+
+```php
+$twigParser = $modx->services->get('twigparser');
+$twigParser->registerInitializer(function (\Twig\Environment $twig) {
+    $twig->addFunction(new \Twig\TwigFunction('price', fn ($cents) => number_format($cents / 100, 2)));
+});
+```
+
+Then in your template:
+
+```twig
+{{ price(1999) }} {# outputs 19.99 #}
+```
+
+### Extensions
+
+Register a full Twig extension class:
+
+```php
+use Twig\Extension\AbstractExtension;
+use Twig\TwigFunction;
+
+class PriceExtension extends AbstractExtension
+{
+    public function getFunctions(): array
+    {
+        return [
+            new TwigFunction('price', fn ($cents) => number_format($cents / 100, 2)),
+            new TwigFunction('vat', fn ($cents, $rate = 0.2) => number_format($cents * $rate / 100, 2)),
+        ];
+    }
+}
+
+$twigParser = $modx->services->get('twigparser');
+$twigParser->registerExtension(new PriceExtension());
+```
+
+### Shared Runtime
+
+If your extension needs to call MODX features (chunks, snippets, URLs), use the shared runtime instead of reimplementing MODX calls:
+
+```php
+use Boffinate\Twig\Support\ModxRuntime;
+use Twig\Extension\AbstractExtension;
+use Twig\TwigFunction;
+
+class CardsExtension extends AbstractExtension
+{
+    public function __construct(private ModxRuntime $runtime) {}
+
+    public function getFunctions(): array
+    {
+        return [
+            new TwigFunction('card', fn (string $title) =>
+                $this->runtime->chunk('CardTpl', ['title' => $title])
+            ),
+            new TwigFunction('card_url', fn (int $id) =>
+                $this->runtime->link($id)
+            ),
+        ];
+    }
+}
+
+$twigParser = $modx->services->get('twigparser');
+$twigParser->registerExtension(new CardsExtension($twigParser->getRuntime()));
+```
+
+The runtime provides: `chunk()`, `snippet()`, `placeholder()`, `option()`, `lexicon()`, `translate()`, `link()`, `field()`.
+
+### OnTwigInit Event
+
+MODX plugins can listen to the `OnTwigInit` system event to register functions or globals when the Twig environment starts up:
+
+```php
+// Plugin code listening to OnTwigInit
+$twig->addFunction(new \Twig\TwigFunction('build_id', fn () => 'v2.1'));
+$twig->addGlobal('release', '2026.03');
+return '';
+```
+
+The event receives `$twig` (the Twig Environment), `$parser` (the Twig parser instance), and `$modx`.
+
+## Caching
+
+Compiled Twig templates are cached under `{core_cache_path}/twig/`. When you clear the MODX cache, the Twig cache is also cleared automatically by the TwigCacheClear plugin.
+
+If template changes do not appear after editing, clear the MODX cache. Make sure the TwigCacheClear plugin is enabled.
+
+## Debugging
+
+The Twig debug extension is enabled by default. You can use `dump()` in templates to inspect variables:
+
+```twig
+{{ dump() }}           {# dumps all variables #}
+{{ dump(placeholders) }}  {# dumps the placeholders array #}
+```
+
+Remove `dump()` calls before going to production.

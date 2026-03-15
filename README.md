@@ -2,6 +2,13 @@
 
 Standalone MODX Extra repository for the Twig integration component.
 
+## User Documentation
+
+- [Using the Twig Extra](./docs/usage.md) -- setup, built-in functions, globals, custom extensions
+- [Using Twig with ContentBlocks](./docs/contentblocks.md) -- field templates, repeaters, the `row_data` variable
+
+## Development
+
 See [BUILDING.md](./BUILDING.md) for the transport-package workflow and the packaging pitfalls already discovered in this repo.
 
 ## Layout
@@ -9,6 +16,7 @@ See [BUILDING.md](./BUILDING.md) for the transport-package workflow and the pack
 - `core/components/twig/` contains the runtime component that is installed into MODX.
 - `_build/` contains the transport package build scripts.
 - `bin/` contains local development helpers for this MODX instance.
+- `docs/` contains user documentation.
 
 ## Local Development In This Environment
 
@@ -32,7 +40,7 @@ composer install --working-dir=core/components/twig
 
 That command:
 
-- builds `twig-0.1.2-pl.transport.zip`
+- builds `twig-0.1.3-pl.transport.zip`
 - writes it to `/var/www/html/core/packages/`
 - reinstalls the package into the local MODX database
 - skips file copying when the live component path is symlinked to this repo

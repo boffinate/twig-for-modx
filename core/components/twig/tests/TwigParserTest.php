@@ -214,6 +214,206 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame('ContentBlocks TWIG', $output);
     }
 
+    public function test_contentblocks_plugin_receives_all_field_placeholders(): void
+    {
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '<img src="{{ url }}" alt="{{ title }}" class="{{ setting }}">',
+                'phs' => [
+                    'url' => '/images/hero.jpg',
+                    'title' => 'Hero Image',
+                    'setting' => 'full-width',
+                    'idx' => 1,
+                ],
+            ]
+        );
+
+        $this->assertSame('<img src="/images/hero.jpg" alt="Hero Image" class="full-width">', $output);
+    }
+
+    public function test_contentblocks_plugin_supports_twig_conditionals_on_field_data(): void
+    {
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{% if url %}<a href="{{ url }}">{{ title }}</a>{% else %}<span>{{ title }}</span>{% endif %}',
+                'phs' => [
+                    'url' => 'https://example.com',
+                    'title' => 'Click here',
+                ],
+            ]
+        );
+
+        $this->assertSame('<a href="https://example.com">Click here</a>', $output);
+    }
+
+    public function test_contentblocks_plugin_supports_twig_conditionals_with_empty_value(): void
+    {
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{% if url %}<a href="{{ url }}">{{ title }}</a>{% else %}<span>{{ title }}</span>{% endif %}',
+                'phs' => [
+                    'url' => '',
+                    'title' => 'No link',
+                ],
+            ]
+        );
+
+        $this->assertSame('<span>No link</span>', $output);
+    }
+
+    public function test_contentblocks_plugin_supports_twig_filters_on_field_data(): void
+    {
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{{ title|upper }} {{ description|default("No description") }}',
+                'phs' => [
+                    'title' => 'hello world',
+                    'description' => '',
+                ],
+            ]
+        );
+
+        $this->assertSame('HELLO WORLD No description', $output);
+    }
+
+    public function test_contentblocks_repeater_wrapper_receives_rows_and_row_data(): void
+    {
+        $rowData = [
+            ['heading' => 'First', 'body' => 'Content one', 'idx' => 1],
+            ['heading' => 'Second', 'body' => 'Content two', 'idx' => 2],
+            ['heading' => 'Third', 'body' => 'Content three', 'idx' => 3],
+        ];
+
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '<ul>{% for row in row_data %}<li>{{ row.heading }}: {{ row.body }}</li>{% endfor %}</ul>',
+                'phs' => [
+                    'rows' => '<li>First: Content one</li><li>Second: Content two</li><li>Third: Content three</li>',
+                    'row_data' => $rowData,
+                    'idx' => 1,
+                ],
+            ]
+        );
+
+        $this->assertSame(
+            '<ul><li>First: Content one</li><li>Second: Content two</li><li>Third: Content three</li></ul>',
+            $output
+        );
+    }
+
+    public function test_contentblocks_repeater_row_data_supports_loop_index(): void
+    {
+        $rowData = [
+            ['title' => 'Alpha'],
+            ['title' => 'Beta'],
+        ];
+
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{% for row in row_data %}{{ loop.index }}.{{ row.title }} {% endfor %}',
+                'phs' => [
+                    'rows' => '',
+                    'row_data' => $rowData,
+                ],
+            ]
+        );
+
+        $this->assertSame('1.Alpha 2.Beta ', $output);
+    }
+
+    public function test_contentblocks_repeater_row_data_supports_conditional_rendering(): void
+    {
+        $rowData = [
+            ['title' => 'Visible', 'hidden' => ''],
+            ['title' => 'Hidden', 'hidden' => '1'],
+            ['title' => 'Also visible', 'hidden' => ''],
+        ];
+
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{% for row in row_data %}{% if not row.hidden %}{{ row.title }} {% endif %}{% endfor %}',
+                'phs' => [
+                    'rows' => '',
+                    'row_data' => $rowData,
+                ],
+            ]
+        );
+
+        $this->assertSame('Visible Also visible ', $output);
+    }
+
+    public function test_contentblocks_repeater_row_data_supports_first_last_checks(): void
+    {
+        $rowData = [
+            ['title' => 'One'],
+            ['title' => 'Two'],
+            ['title' => 'Three'],
+        ];
+
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{% for row in row_data %}{% if loop.first %}[{% endif %}{{ row.title }}{% if not loop.last %}, {% endif %}{% if loop.last %}]{% endif %}{% endfor %}',
+                'phs' => [
+                    'rows' => '',
+                    'row_data' => $rowData,
+                ],
+            ]
+        );
+
+        $this->assertSame('[One, Two, Three]', $output);
+    }
+
+    public function test_contentblocks_repeater_wrapper_can_count_rows(): void
+    {
+        $rowData = [
+            ['title' => 'A'],
+            ['title' => 'B'],
+            ['title' => 'C'],
+        ];
+
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{{ row_data|length }} items',
+                'phs' => [
+                    'rows' => '',
+                    'row_data' => $rowData,
+                ],
+            ]
+        );
+
+        $this->assertSame('3 items', $output);
+    }
+
+    public function test_contentblocks_repeater_row_template_renders_individual_fields(): void
+    {
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '<div class="card"><h3>{{ heading }}</h3><p>{{ body }}</p>{% if image %}<img src="{{ image }}">{% endif %}</div>',
+                'phs' => [
+                    'heading' => 'Card Title',
+                    'body' => 'Card content goes here',
+                    'image' => '/images/card.jpg',
+                    'idx' => 1,
+                ],
+            ]
+        );
+
+        $this->assertSame(
+            '<div class="card"><h3>Card Title</h3><p>Card content goes here</p><img src="/images/card.jpg"></div>',
+            $output
+        );
+    }
+
     public function test_custom_initializer_can_register_twig_function(): void
     {
         $parser = $this->modx->parser;
