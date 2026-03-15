@@ -77,8 +77,8 @@ See [HTML Escaping](./usage.md#html-escaping) for details.
 {% if [[*published]] %}
 
 {# Right: #}
+{% if resource.published %}
 {% if field('published') %}
-{% if modx.resource.published %}
 ```
 
 ### Vue/Angular/Alpine expressions causing errors
@@ -117,19 +117,19 @@ If you are used to MODX tag syntax, this table shows the Twig equivalents.
 
 | MODX | Twig |
 |------|------|
-| `[[*pagetitle]]` | `{{ field('pagetitle') }}` or `{{ modx.resource.pagetitle }}` |
-| `[[*id]]` | `{{ modx.resource.id }}` |
-| `[[*content]]` | `{{ field('content')\|raw }}` |
-| `[[*parent]]` | `{{ modx.resource.parent }}` |
-| `[[*template]]` | `{{ modx.resource.template }}` |
+| `[[*pagetitle]]` | `{{ resource.pagetitle }}` |
+| `[[*id]]` | `{{ resource.id }}` |
+| `[[*content]]` | `{{ resource.content\|raw }}` |
+| `[[*parent]]` | `{{ resource.parent }}` |
+| `[[*template]]` | `{{ resource.template }}` |
 
 ### Template Variables
 
 | MODX | Twig |
 |------|------|
-| `[[*MyTV]]` | `{{ field('MyTV') }}` |
-| `[[*MyTV:default=`fallback`]]` | `{{ field('MyTV', 'fallback') }}` |
-| `[[*ImageTV]]` (HTML output) | `{{ field('ImageTV')\|raw }}` |
+| `[[*MyTV]]` | `{{ resource.MyTV }}` |
+| `[[*MyTV:default=`fallback`]]` | `{{ resource.MyTV\|default('fallback') }}` |
+| `[[*ImageTV]]` (HTML output) | `{{ resource.ImageTV\|raw }}` |
 
 ### Placeholders
 
@@ -164,14 +164,14 @@ If you are used to MODX tag syntax, this table shows the Twig equivalents.
 | MODX | Twig |
 |------|------|
 | `[[~12]]` | `{{ link(12) }}` |
-| `[[~[[*id]]]]` | `{{ link(modx.resource.id) }}` |
+| `[[~[[*id]]]]` | `{{ link(resource.id) }}` |
 
 ### Output modifiers (filters)
 
 | MODX | Twig |
 |------|------|
-| `[[*pagetitle:ucase]]` | `{{ field('pagetitle')\|upper }}` |
-| `[[*pagetitle:lcase]]` | `{{ field('pagetitle')\|lower }}` |
+| `[[*pagetitle:ucase]]` | `{{ resource.pagetitle\|upper }}` |
+| `[[*pagetitle:lcase]]` | `{{ resource.pagetitle\|lower }}` |
 | `[[+value:default=`none`]]` | `{{ value\|default('none') }}` |
 | `[[+value:stripTags]]` | `{{ value\|striptags }}` |
 | `[[+value:nl2br]]` | `{{ value\|nl2br }}` |
@@ -186,7 +186,7 @@ If you are used to MODX tag syntax, this table shows the Twig equivalents.
 | `[[+value:is=`yes`:then=`Yes!`:else=`No`]]` | `{{ value == 'yes' ? 'Yes!' : 'No' }}` |
 | `[[+value:notempty=`Has value`]]` | `{% if value %}Has value{% endif %}` |
 | `[[+value:empty=`No value`]]` | `{% if not value %}No value{% endif %}` |
-| `[[*published:is=`1`:then=`Live`]]` | `{% if modx.resource.published %}Live{% endif %}` |
+| `[[*published:is=`1`:then=`Live`]]` | `{% if resource.published %}Live{% endif %}` |
 
 ### Iteration
 

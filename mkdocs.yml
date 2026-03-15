@@ -27,6 +27,7 @@ nav:
   - Home: index.md
   - Getting Started: usage.md
   - ContentBlocks: contentblocks.md
+  - Coming from Fenom: coming-from-fenom.md
   - Developer Guide: developer-guide.md
   - Releasing: releasing.md
   - Troubleshooting: troubleshooting.md

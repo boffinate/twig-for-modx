@@ -3,9 +3,9 @@
 Use Twig template syntax inside MODX templates, chunks, resources, and ContentBlocks fields -- without replacing the MODX parser.
 
 ```twig
-<h1>{{ field("pagetitle")|upper }}</h1>
-{% if field('HeroImage') %}
-    <img src="{{ field('HeroImage') }}">
+<h1>{{ resource.pagetitle|upper }}</h1>
+{% if resource.HeroImage %}
+    <img src="{{ resource.HeroImage }}">
 {% endif %}
 {{ chunk('HeroCta', {'label': 'Buy now'}) }}
 ```
@@ -16,6 +16,7 @@ Use Twig template syntax inside MODX templates, chunks, resources, and ContentBl
 
 - [Getting Started](usage.md) -- installation, built-in functions, globals, escaping, filters
 - [ContentBlocks](contentblocks.md) -- field templates, repeaters, the `row_data` variable
+- [Coming from Fenom](coming-from-fenom.md) -- Fenom-to-Twig syntax mapping, user/profile access, what changes
 - [Troubleshooting](troubleshooting.md) -- common mistakes, error handling, MODX-to-Twig cheat sheet
 
 **For PHP developers building extras:**

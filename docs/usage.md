@@ -5,7 +5,7 @@
 The Twig Extra adds Twig template syntax to your normal MODX workflow. It does not replace MODX rendering. Instead it runs a Twig pass inside the existing MODX parser cycle, so you can mix Twig expressions with standard MODX tags in templates, chunks, resources, and snippet output.
 
 ```html
-<h1>{{ field("pagetitle")|upper }}</h1>
+<h1>{{ resource.pagetitle|upper }}</h1>
 <p>[[*introtext]]</p>
 {{ chunk('HeroCta', {'label': 'Buy now'}) }}
 ```
@@ -101,34 +101,68 @@ Generates a URL for a MODX resource.
 
 ### field(name, default, resource)
 
-Reads a resource field or Template Variable from the current resource. Falls back to the default if the field is empty.
+Reads a resource field or Template Variable from the current resource. Falls back to the default if the field is empty. For accessing fields on the current resource, prefer the [`resource` global](#resource) instead.
 
 ```twig
-{{ field('pagetitle') }}
+{# Preferred: use the resource global #}
+{{ resource.pagetitle }}
+{{ resource.HeroImage }}
+
+{# field() is useful for defaults and cross-resource lookups #}
 {{ field('HeroImage', '/images/fallback.jpg') }}
-```
-
-You can also pass a hash for named parameters:
-
-```twig
 {{ field({'name': 'CustomTV', 'default': 'none', 'resource': 42}) }}
 ```
 
 ## Global Variables
 
-Three globals are available in every Twig template:
+Four globals are available in every Twig template:
+
+### resource
+
+The current MODX resource. Access built-in fields and Template Variables as properties:
+
+```twig
+{{ resource.pagetitle }}
+{{ resource.alias }}
+{{ resource.id }}
+{{ resource.parent }}
+{{ resource.content|raw }}
+```
+
+Template Variables work the same way -- no need for a separate function call:
+
+```twig
+{{ resource.HeroImage }}
+{{ resource.CustomField }}
+{% if resource.ShowBanner %}
+    <div class="banner">{{ resource.BannerText }}</div>
+{% endif %}
+```
+
+TV values are processed/rendered by default (same as `[[*myTv]]`). If you need the raw stored value before MODX applies output rendering:
+
+```twig
+{{ resource.tvRawValue('HeroImage') }}
+```
+
+In CLI, API, or manager contexts where no resource is loaded, `resource` is `null`. Guard against this if your template may run in those contexts:
+
+```twig
+{% if resource %}
+    <h1>{{ resource.pagetitle }}</h1>
+{% endif %}
+```
 
 ### modx
 
-The MODX instance. Use it to access resource fields directly.
+The MODX instance. Use `resource` for accessing resource fields. The `modx` global is available for other MODX features:
 
 ```twig
 {{ modx.resource.id }}
 {{ modx.resource.pagetitle }}
-{{ modx.resource.parent }}
 ```
 
-Use `modx` sparingly. The helper functions are usually clearer.
+Use `modx` sparingly. The helper functions and `resource` global are usually clearer.
 
 ### placeholders
 
@@ -228,7 +262,7 @@ Twig and MODX tags work together in the same template. Twig runs first, then MOD
 
 ```twig
 {# Twig handles the logic #}
-{% if modx.resource.parent == 5 %}
+{% if resource.parent == 5 %}
     <nav>[[!SiteNav? &startId=`5`]]</nav>
 {% endif %}
 
@@ -240,11 +274,11 @@ Twig and MODX tags work together in the same template. Twig runs first, then MOD
 You can also call MODX elements through the Twig functions instead of tags:
 
 ```twig
-{% if modx.resource.parent == 5 %}
+{% if resource.parent == 5 %}
     <nav>{{ snippet('SiteNav', {'startId': 5}) }}</nav>
 {% endif %}
 
-<h1>{{ field('pagetitle') }}</h1>
+<h1>{{ resource.pagetitle }}</h1>
 ```
 
 Both approaches work. Choose whichever is clearer for your template.
