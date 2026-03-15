@@ -1,0 +1,18 @@
+Twig 0.1.2-pl
+====================
+
+- Stop packaging placeholder `.gitignore` files and empty transport directories
+- Skip the assets file resolver when the assets tree contains no packageable files
+
+Twig 0.1.1-pl
+====================
+
+- Fix file vehicle resolver paths so the component installs into core/assets `components/twig`
+- Keep package metadata and README available during install
+
+Twig 0.1.0-pl
+====================
+
+- Initial MODX Extra packaging for the Twig component
+- Packages namespace, custom system event, plugins, and component files
+- Adds local development scripts for build and reinstall in this MODX install

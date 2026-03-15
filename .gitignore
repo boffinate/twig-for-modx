@@ -1,0 +1,4 @@
+/core/components/twig/vendor/
+/core/components/twig/.phpunit.result.cache
+/core/components/twig/.php-cs-fixer.cache
+/.backup/
