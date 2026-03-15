@@ -8,13 +8,11 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: teal
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: teal
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -33,6 +31,9 @@ nav:
   - Developer Guide: developer-guide.md
   - Releasing: releasing.md
   - Troubleshooting: troubleshooting.md
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - tables

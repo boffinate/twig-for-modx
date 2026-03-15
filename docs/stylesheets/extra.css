@@ -1,0 +1,22 @@
+/* Match MODX docs color palette – cyan #00B5DE from docs.modx.com */
+[data-md-color-primary="indigo"] {
+  --md-primary-fg-color: #00B5DE;
+  --md-primary-fg-color--light: #33C4E5;
+  --md-primary-fg-color--dark: #009ABC;
+}
+
+[data-md-color-accent="indigo"] {
+  --md-accent-fg-color: #1C6FDC;
+}
+
+[data-md-color-scheme="default"] {
+  --md-typeset-color: #4A5568;
+  --md-typeset-a-color: #1C6FDC;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #00B5DE;
+  --md-primary-fg-color--light: #33C4E5;
+  --md-primary-fg-color--dark: #009ABC;
+  --md-accent-fg-color: #4DC9F6;
+}
