@@ -1,5 +1,7 @@
 site_name: Twig for MODX
 site_description: Use Twig syntax inside MODX templates, chunks, and ContentBlocks fields.
+repo_url: https://github.com/boffinate/twig-for-modx
+repo_name: boffinate/twig-for-modx
 
 theme:
   name: material
