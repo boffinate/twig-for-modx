@@ -14,8 +14,6 @@ use MODX\Revolution\modTemplate;
 use MODX\Revolution\modTemplateVar;
 use MODX\Revolution\Processors\Element\Plugin\Create as PluginCreate;
 use MODX\Revolution\Processors\Element\Snippet\Create;
-use ModxPro\PdoTools\CoreTools;
-
 abstract class ParserTestCase extends MODxTestCase
 {
     /** @var string[] */
@@ -73,9 +71,10 @@ abstract class ParserTestCase extends MODxTestCase
 
     protected function loadPdoTools(): void
     {
-        if (!$this->modx->services->has('pdotools')) {
+        $bootstrapPath = MODX_CORE_PATH . 'components/pdotools/bootstrap.php';
+        if (!$this->modx->services->has('pdotools') && file_exists($bootstrapPath)) {
             $modx = $this->modx;
-            require_once MODX_CORE_PATH . 'components/pdotools/bootstrap.php';
+            require_once $bootstrapPath;
         }
     }
 
@@ -92,11 +91,7 @@ abstract class ParserTestCase extends MODxTestCase
 
     protected function useTwigParser(): void
     {
-        $pdoTools = $this->modx->services->has('pdotools')
-            ? $this->modx->services->get('pdotools')
-            : new CoreTools($this->modx, []);
-
-        $parser = new Twig($this->modx, $pdoTools);
+        $parser = new Twig($this->modx);
         $this->modx->parser = $parser;
         if (!$this->modx->services->has('twigparser')) {
             $this->modx->services->add('twigparser', $parser);

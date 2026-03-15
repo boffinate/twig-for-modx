@@ -7,35 +7,30 @@ use Boffinate\Twig\Extension\ModxExtension;
 use Boffinate\Twig\Proxy\modChunkTwig;
 use Boffinate\Twig\Support\ModxRuntime;
 use MODX\Revolution\modChunk;
+use MODX\Revolution\modParser;
 use MODX\Revolution\modX;
-use ModxPro\PdoTools\CoreTools;
-use ModxPro\PdoTools\Parsing\Parser;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Extension\ExtensionInterface;
 use xPDO\xPDO;
 
-class Twig extends Parser
+class Twig extends modParser
 {
     /** @var modX $modx */
     public $modx;
-    /** @var CoreTools $pdoTools */
-    protected $pdoTools;
 
     private Environment $twig;
     /** @var callable[] */
     private array $initializers = [];
     private ?ModxRuntime $runtime = null;
 
-    public function __construct(modX $modx, CoreTools $pdoTools)
+    public function __construct(modX &$modx)
     {
-        parent::__construct($modx, $pdoTools);
-
-        $this->modx = $modx;
-        $this->pdoTools = $pdoTools;
+        parent::__construct($modx);
     }
+
     /**
-     * Trying to process MODX pages with Fenom template engine
+     * Process MODX content with Twig template engine
      *
      * @param string $parentTag
      * @param string $content
@@ -58,7 +53,6 @@ class Twig extends Parser
         $tokens = array(),
         $depth = 0
     ) {
-        //xdebug_break();
         if (is_string($content) && $processUncacheable
             && $this->modx->context->key !== 'mgr') {
             $this->init();
@@ -79,19 +73,6 @@ class Twig extends Parser
         );
     }
 
-
-    /**
-     * Quickly processes a simple tag and returns the result.
-     *
-     * @param string $tag A full tag string parsed from content.
-     * @param boolean $processUncacheable
-     *
-     * @return mixed The output of the processed element represented by the specified tag.
-     */
-    public function processTag($tag, $processUncacheable = true)
-    {
-        return parent::processTag($tag, $processUncacheable);
-    }
 
     public function getElement($class, $name)
     {

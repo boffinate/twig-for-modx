@@ -529,4 +529,92 @@ class TwigParserTest extends ParserTestCase
 
         $this->assertSame('Chunk TWIG | Snippet TWIG', $this->processContent($content));
     }
+
+    // --- PDOTools coexistence tests ---
+
+    public function test_pdotools_services_available_alongside_twig(): void
+    {
+        $this->assertTrue(
+            $this->modx->services->has('pdotools'),
+            'pdotools service should be available when PDOTools is installed'
+        );
+
+        $pdoTools = $this->modx->services->get('pdotools');
+        $this->assertInstanceOf(\ModxPro\PdoTools\CoreTools::class, $pdoTools);
+    }
+
+    public function test_pdotools_parser_processes_modx_tags_independently(): void
+    {
+        // Create a PDOTools parser instance separately from the Twig parser
+        $pdoTools = $this->modx->services->get('pdotools');
+        $pdoParser = new \ModxPro\PdoTools\Parsing\Parser($this->modx, $pdoTools);
+
+        $this->modx->setPlaceholder('name', 'PDO');
+        $content = 'Hello [[+name]]';
+        $pdoParser->processElementTags('', $content, true, true, '[[', ']]', [], 10);
+
+        $this->assertSame('Hello PDO', $content);
+    }
+
+    public function test_pdotools_parser_processes_fenom_independently(): void
+    {
+        // Create a PDOTools parser instance separately from the Twig parser
+        $pdoTools = $this->modx->services->get('pdotools');
+        $pdoParser = new \ModxPro\PdoTools\Parsing\Parser($this->modx, $pdoTools);
+
+        // Enable Fenom for this parser instance
+        $pdoTools->setConfig(['useFenomParser' => true]);
+
+        $this->modx->setPlaceholder('name', 'Fenom');
+        $content = 'Hello {$_pls["name"]}';
+        $pdoParser->processElementTags('', $content, true, true, '[[', ']]', [], 10);
+
+        $this->assertSame('Hello Fenom', $content);
+    }
+
+    public function test_pdotools_inline_chunk_rendering_works_alongside_twig(): void
+    {
+        // pdoTools supports inline chunk templates with @INLINE prefix
+        $pdoTools = $this->modx->services->get('pdotools');
+        $output = $pdoTools->getChunk('@INLINE Hello [[+name]]', ['name' => 'PDO']);
+
+        $this->assertSame('Hello PDO', $output);
+    }
+
+    public function test_fenom_variables_resolved_after_twig_renders(): void
+    {
+        // Simulate production flow: Twig renders first, then PDOTools Parser
+        // processes the result (including Fenom {$var} syntax)
+        $twigParser = $this->modx->services->get('twigparser');
+
+        // Content mixes Twig and Fenom syntax
+        // Twig will process {{ 2 + 2 }} but leave {$_pls["name"]} alone
+        $content = 'Twig: {{ 2 + 2 }} Fenom: {$_pls["name"]}';
+        $twigRendered = $twigParser->renderString($content, []);
+
+        // Twig should have rendered its expression, leaving Fenom syntax intact
+        $this->assertStringContainsString('Twig: 4', $twigRendered);
+        $this->assertStringContainsString('{$_pls["name"]}', $twigRendered);
+
+        // Now pass through PDOTools Parser with Fenom enabled
+        $pdoTools = $this->modx->services->get('pdotools');
+        $pdoParser = new \ModxPro\PdoTools\Parsing\Parser($this->modx, $pdoTools);
+        $pdoTools->setConfig(['useFenomParser' => true]);
+
+        $this->modx->setPlaceholder('name', 'World');
+        $pdoParser->processElementTags('', $twigRendered, true, true, '[[', ']]', [], 10);
+
+        $this->assertSame('Twig: 4 Fenom: World', $twigRendered);
+    }
+
+    public function test_twig_and_pdotools_parsers_are_independent_instances(): void
+    {
+        $twigParser = $this->modx->parser;
+        $pdoTools = $this->modx->services->get('pdotools');
+        $pdoParser = new \ModxPro\PdoTools\Parsing\Parser($this->modx, $pdoTools);
+
+        $this->assertInstanceOf(Twig::class, $twigParser);
+        $this->assertInstanceOf(\ModxPro\PdoTools\Parsing\Parser::class, $pdoParser);
+        $this->assertNotSame($twigParser, $pdoParser);
+    }
 }
