@@ -201,6 +201,71 @@ class TwigParserTest extends ParserTestCase
         $this->processContent('[[BrokenTwigSnippet]]');
     }
 
+    public function test_dump_outputs_single_variable(): void
+    {
+        $output = $this->processContent('{{ dump("hello") }}');
+        $this->assertStringContainsString('hello', $output);
+    }
+
+    public function test_dump_with_no_args_outputs_all_context_variables(): void
+    {
+        // dump() with no args var_dumps the entire context including the modx object.
+        // In processContent the Twig pass happens inside processElementTags which
+        // replaces $content in-place. If the output is very large the MODX parser
+        // may strip or truncate it. Test via renderString directly.
+        $twig = $this->modx->services->get('twigparser');
+        $output = $twig->renderString('{{ dump() }}', ['test_var' => 'visible']);
+        $this->assertStringContainsString('test_var', $output);
+        $this->assertStringContainsString('visible', $output);
+    }
+
+    public function test_contentblocks_dump_shows_all_field_variables(): void
+    {
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{{ dump() }}',
+                'phs' => [
+                    'value' => 'test content',
+                    'url' => '/images/hero.jpg',
+                    'idx' => 1,
+                ],
+            ]
+        );
+
+        // dump() with no args should show the ContentBlocks placeholders
+        $this->assertStringContainsString('value', $output);
+        $this->assertStringContainsString('test content', $output);
+        $this->assertStringContainsString('url', $output);
+        $this->assertStringContainsString('/images/hero.jpg', $output);
+        $this->assertStringContainsString('idx', $output);
+    }
+
+    public function test_contentblocks_dump_shows_repeater_row_data(): void
+    {
+        $rowData = [
+            ['heading' => 'First', 'body' => 'Content one'],
+            ['heading' => 'Second', 'body' => 'Content two'],
+        ];
+
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{{ dump() }}',
+                'phs' => [
+                    'rows' => '<p>rendered</p>',
+                    'row_data' => $rowData,
+                    'idx' => 1,
+                ],
+            ]
+        );
+
+        $this->assertStringContainsString('row_data', $output);
+        $this->assertStringContainsString('heading', $output);
+        $this->assertStringContainsString('First', $output);
+        $this->assertStringContainsString('Second', $output);
+    }
+
     public function test_contentblocks_plugin_renders_twig_markup(): void
     {
         $output = $this->executePluginFile(

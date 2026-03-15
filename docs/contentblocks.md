@@ -392,6 +392,44 @@ Repeater sub-fields: `tab_title`, `tab_content`
 {% endif %}
 ```
 
+## Inspecting Available Variables
+
+Use `dump()` in a ContentBlocks template to see every variable available to it:
+
+```twig
+{{ dump() }}
+```
+
+This outputs a `var_dump` of all template variables -- field values, `idx`, `rows`, `row_data`, and everything else ContentBlocks passes through. It is the quickest way to find out what data you have to work with.
+
+To inspect a single variable:
+
+```twig
+{{ dump(row_data) }}
+{{ dump(value) }}
+```
+
+Example output from a repeater wrapper template:
+
+```
+array(4) {
+  ["rows"]=> string(82) "<div>...</div>"
+  ["row_data"]=> array(2) {
+    [0]=> array(2) {
+      ["heading"]=> string(5) "First"
+      ["body"]=> string(11) "Content one"
+    }
+    [1]=> array(2) {
+      ["heading"]=> string(6) "Second"
+      ["body"]=> string(11) "Content two"
+    }
+  }
+  ["idx"]=> int(1)
+}
+```
+
+Remove `dump()` calls before going to production. The Twig debug extension is enabled by default.
+
 ## Using MODX Functions Inside ContentBlocks Templates
 
 The built-in Twig functions work inside ContentBlocks templates. You can call chunks, snippets, read system settings, and generate URLs.
