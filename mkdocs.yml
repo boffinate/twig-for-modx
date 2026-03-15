@@ -24,6 +24,7 @@ theme:
     - toc.integrate
 
 nav:
+  - Home: index.md
   - Getting Started: usage.md
   - ContentBlocks: contentblocks.md
   - Developer Guide: developer-guide.md
