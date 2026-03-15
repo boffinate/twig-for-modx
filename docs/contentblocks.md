@@ -394,26 +394,52 @@ Repeater sub-fields: `tab_title`, `tab_content`
 
 ## Inspecting Available Variables
 
-Use `dump()` in a ContentBlocks template to see every variable available to it:
+The Twig debug extension is enabled by default. Use `dump()` to see what data ContentBlocks is passing to your template. This is safe to do in ContentBlocks templates because the plugin renders with just the field placeholders, not the entire MODX instance, so the output stays a manageable size.
+
+### Dump everything
+
+Call `dump()` with no arguments to see every variable available in the current template:
 
 ```twig
 {{ dump() }}
 ```
 
-This outputs a `var_dump` of all template variables -- field values, `idx`, `rows`, `row_data`, and everything else ContentBlocks passes through. It is the quickest way to find out what data you have to work with.
-
-To inspect a single variable:
+### Dump a single variable
 
 ```twig
 {{ dump(row_data) }}
 {{ dump(value) }}
+{{ dump(idx) }}
 ```
 
-Example output from a repeater wrapper template:
+### What you will see
+
+**Simple field template** -- the output shows the field's placeholders:
+
+```
+array(3) {
+  ["value"]=> string(11) "Hello world"
+  ["idx"]=> int(1)
+  ["setting"]=> string(10) "full-width"
+}
+```
+
+**Repeater row template** -- the output shows that row's sub-field values:
 
 ```
 array(4) {
-  ["rows"]=> string(82) "<div>...</div>"
+  ["heading"]=> string(10) "Card Title"
+  ["body"]=> string(21) "Card content goes here"
+  ["image"]=> string(15) "/images/card.jpg"
+  ["idx"]=> int(1)
+}
+```
+
+**Repeater wrapper template** -- the output shows the rendered rows string, the raw row data array, and any wrapper-level variables:
+
+```
+array(3) {
+  ["rows"]=> string(82) "<div>...</div><div>...</div>"
   ["row_data"]=> array(2) {
     [0]=> array(2) {
       ["heading"]=> string(5) "First"
@@ -428,7 +454,14 @@ array(4) {
 }
 ```
 
-Remove `dump()` calls before going to production. The Twig debug extension is enabled by default.
+The `row_data` array is only present when the [ContentBlocks patch](#required-contentblocks-patch) is applied. Without the patch, the wrapper output will show `rows` as a string but no `row_data` key.
+
+### Tips
+
+- Put `{{ dump() }}` at the top of a template you are building to get a quick reference of what variables are available, then remove it when you are done.
+- If the output is hard to read on the page, view the page source or wrap it in `<pre>` tags: `<pre>{{ dump() }}</pre>`.
+- The output uses PHP's `var_dump` format. Array keys are the variable names you use in Twig (`{{ heading }}`, `{{ row.body }}`, etc.).
+- Remove all `dump()` calls before going to production.
 
 ## Using MODX Functions Inside ContentBlocks Templates
 

@@ -313,13 +313,43 @@ Compiled Twig templates are cached under `{core_cache_path}/twig/`. When you cle
 
 If template changes do not appear after editing, clear the MODX cache. Make sure the TwigCacheClear plugin is enabled.
 
-## Debugging
+## Debugging with dump()
 
-The Twig debug extension is enabled by default. You can use `dump()` in templates to inspect variables:
+The Twig debug extension is enabled by default. The `dump()` function outputs a `var_dump` of any variable, or of the entire template context when called with no arguments.
+
+### Dump a single variable
 
 ```twig
-{{ dump() }}           {# dumps all variables #}
-{{ dump(placeholders) }}  {# dumps the placeholders array #}
+{{ dump(placeholders) }}
+{{ dump(modx.resource) }}
 ```
 
-Remove `dump()` calls before going to production.
+### Dump everything available in the template
+
+```twig
+{{ dump() }}
+```
+
+With no arguments, `dump()` shows every variable in the current template context. This is the quickest way to find out what data you have to work with.
+
+**Caution in normal templates:** In a standard MODX template or chunk, the context includes the `modx` global (the full MODX instance) and `modx_runtime`. Dumping these produces a very large output that can hang the page or exhaust memory. In normal templates, dump specific variables instead:
+
+```twig
+{{ dump(placeholders) }}
+{{ dump(field('pagetitle')) }}
+```
+
+**In ContentBlocks templates** this is not a problem. The ContentBlocks plugin calls `renderString()` directly with just the field placeholders, so `dump()` only shows the ContentBlocks data. See the [ContentBlocks guide](./contentblocks.md#inspecting-available-variables) for details and example output.
+
+### Block form
+
+The block form writes output to the Symfony dump collector if available, but in a MODX context it works the same as the function form:
+
+```twig
+{% dump value %}
+{% dump row_data %}
+```
+
+### Remove dump() before going live
+
+`dump()` only works when debug mode is enabled (it is by default in this extra). Remove all `dump()` calls before deploying to production.
