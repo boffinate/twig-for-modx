@@ -1,3 +1,14 @@
+Twig 0.3.0-pl
+====================
+
+- Add `resource` global for unified access to resource fields and Template Variables
+- TVs accessible as properties: {{ resource.MyTV }} returns the processed value
+- Add tvRawValue() method for raw TV access without output rendering
+- TV lookups cached per-request to avoid redundant queries
+- Add "Coming from Fenom" migration guide
+- Update all documentation to use the resource global
+- Rewrite README with clearer introduction
+
 Twig 0.2.0-pl
 ====================
 
