@@ -98,7 +98,7 @@ git -C "${repo_root}" push origin "${tag}"
 
 gh release create "${tag}" \
     --repo boffinate/twig-for-modx \
-    --title "Twig ${full}" \
+    --title "Twig for MODX ${full}" \
     --notes "${notes}" \
     "${zip_path}#twig-${full}.transport.zip"
 
