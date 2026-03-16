@@ -29,6 +29,10 @@ class Twig extends modParser
     private const MAX_RENDER_DEPTH = 5;
     private const MAX_OUTPUT_SIZE = 5_242_880; // 5MB
     private ?modParser $wrappedParser = null;
+    private ?ResourceAccessor $resourceAccessor = null;
+    private ?modResource $lastResource = null;
+
+    public const GLOBAL_KEYS = ['modx', 'resource', 'placeholders', 'modx_runtime'];
 
     public function __construct(modX &$modx)
     {
@@ -123,7 +127,6 @@ class Twig extends modParser
         ]);
         $this->twig->addExtension(new ModxDebugExtension($this->modx));
         $this->twig->addExtension(new ModxExtension($this->getRuntime()));
-        $this->syncGlobals();
         $this->applyInitializers();
         $this->modx->invokeEvent('OnTwigInit', [
             'twig' => $this->twig,
@@ -264,8 +267,14 @@ class Twig extends modParser
     private function wrapResource(): ?ResourceAccessor
     {
         $resource = $this->modx->resource;
-
-        return $resource instanceof modResource ? new ResourceAccessor($resource) : null;
+        if (!$resource instanceof modResource) {
+            return null;
+        }
+        if ($this->resourceAccessor === null || $resource !== $this->lastResource) {
+            $this->lastResource = $resource;
+            $this->resourceAccessor = new ResourceAccessor($resource);
+        }
+        return $this->resourceAccessor;
     }
 
     private function applyInitializers(): void

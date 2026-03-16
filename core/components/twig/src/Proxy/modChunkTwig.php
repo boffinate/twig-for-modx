@@ -13,9 +13,12 @@ use ReflectionClass;
  */
 class modChunkTwig extends modChunk
 {
+    private ReflectionClass $reflection;
+
     public function __construct(private modChunk $wrappedClass, private Twig $twig)
     {
         parent::__construct($twig->modx);
+        $this->reflection = new ReflectionClass($this->wrappedClass);
     }
 
     public function process($properties = null, $content = null)
@@ -61,7 +64,6 @@ class modChunkTwig extends modChunk
 
     private function isConstant(string $name): bool
     {
-        $reflectionClass = new ReflectionClass($this->wrappedClass);
-        return $reflectionClass->hasConstant($name);
+        return $this->reflection->hasConstant($name);
     }
 }

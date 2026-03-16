@@ -9,6 +9,8 @@ use MODX\Revolution\modX;
 
 class ModxRuntime
 {
+    private ?int $maxIterations = null;
+
     public function __construct(private Twig $parser, private modX $modx)
     {
     }
@@ -103,8 +105,8 @@ class ModxRuntime
         }
         $tag .= ']]';
 
-        $maxIterations = (int) $this->modx->getOption('parser_max_iterations', null, 10);
-        $this->parser->processElementTags('', $tag, true, true, '[[', ']]', [], $maxIterations);
+        $this->maxIterations ??= (int) $this->modx->getOption('parser_max_iterations', null, 10);
+        $this->parser->processElementTags('', $tag, true, true, '[[', ']]', [], $this->maxIterations);
 
         return $tag;
     }

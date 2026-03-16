@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Boffinate\Twig\Extension;
 
+use Boffinate\Twig\Twig;
 use Symfony\Component\VarDumper\Caster\CutStub;
 use Symfony\Component\VarDumper\Cloner\Stub;
 use Symfony\Component\VarDumper\Cloner\VarCloner;
@@ -28,7 +29,8 @@ use Twig\TwigFunction;
  */
 final class ModxDebugExtension extends AbstractExtension
 {
-    private const GLOBAL_KEYS = ['modx', 'resource', 'placeholders', 'modx_runtime'];
+    /** @see Twig::GLOBAL_KEYS */
+    private const GLOBAL_KEYS = Twig::GLOBAL_KEYS;
     private const MAX_DUMP_SIZE = 2_097_152; // 2MB
 
     /** Properties on modX (and inherited xPDO) that template authors will find useful — fully expandable. */

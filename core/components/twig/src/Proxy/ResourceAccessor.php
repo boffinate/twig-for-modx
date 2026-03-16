@@ -30,21 +30,12 @@ class ResourceAccessor
 
     public function __get(string $name): mixed
     {
-        $value = $this->resource->get($name);
-        if ($value !== null) {
-            return $value;
-        }
-
-        return $this->getProcessedTvValue($name);
+        return $this->resolve($name);
     }
 
     public function __isset(string $name): bool
     {
-        if ($this->resource->get($name) !== null) {
-            return true;
-        }
-
-        return $this->getProcessedTvValue($name) !== null;
+        return $this->resolve($name) !== null;
     }
 
     /**
@@ -72,17 +63,29 @@ class ResourceAccessor
         return $this->resource->$name(...$arguments);
     }
 
-    private function getProcessedTvValue(string $name): mixed
+    /**
+     * Resolve a name to a resource field or TV value, caching the result
+     * so that Twig's __isset + __get pair doesn't double-query.
+     */
+    private function resolve(string $name): mixed
     {
+        if (array_key_exists($name, $this->tvCache)) {
+            return $this->tvCache[$name];
+        }
+
+        $value = $this->resource->get($name);
+        if ($value !== null) {
+            $this->tvCache[$name] = $value;
+            return $value;
+        }
+
         if (isset($this->tvLookedUp[$name])) {
-            return $this->tvCache[$name] ?? null;
+            return null;
         }
 
         $this->tvLookedUp[$name] = true;
         $value = $this->resource->getTVValue($name);
-        if ($value !== null) {
-            $this->tvCache[$name] = $value;
-        }
+        $this->tvCache[$name] = $value;
 
         return $value;
     }
