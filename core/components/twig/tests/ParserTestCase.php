@@ -265,6 +265,11 @@ abstract class ParserTestCase extends MODxTestCase
 
     protected function executePluginFile(string $path, array $variables = [])
     {
+        $event = new \stdClass();
+        $event->_output = null;
+        $previousEvent = $this->modx->event ?? null;
+        $this->modx->event = $event;
+
         $plugin = new class($this->modx) {
             public function __construct(public $modx)
             {
@@ -278,7 +283,11 @@ abstract class ParserTestCase extends MODxTestCase
             return require $path;
         }, $plugin, $plugin);
 
-        return $runner($path, $variables);
+        $returned = $runner($path, $variables);
+        $output = $event->_output ?? $returned;
+        $this->modx->event = $previousEvent;
+
+        return $output;
     }
 
     protected function resetPluginRuntimeState(): void

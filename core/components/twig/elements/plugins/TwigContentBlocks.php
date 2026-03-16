@@ -9,6 +9,10 @@ declare(strict_types=1);
  * @var array<string, mixed> $phs
  */
 
+if (!\Boffinate\Twig\Twig::containsTwigSyntax($tpl)) {
+    return;
+}
+
 /** @var \Boffinate\Twig\Twig $twig */
 $twig = $modx->services->get('twigparser');
 if (!is_array($phs)) {
@@ -22,4 +26,5 @@ if (!is_array($phs)) {
     }
 }
 
-return $twig->renderString($tpl, $phs);
+$modx->event->_output = $twig->renderString($tpl, $phs);
+return;

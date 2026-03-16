@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Boffinate\Twig;
 
+use Boffinate\Twig\Extension\ModxDebugExtension;
 use Boffinate\Twig\Extension\ModxExtension;
 use Boffinate\Twig\Proxy\modChunkTwig;
 use Boffinate\Twig\Proxy\ResourceAccessor;
@@ -12,7 +13,6 @@ use MODX\Revolution\modParser;
 use MODX\Revolution\modResource;
 use MODX\Revolution\modX;
 use Twig\Environment;
-use Twig\Extension\DebugExtension;
 use Twig\Extension\ExtensionInterface;
 use xPDO\xPDO;
 
@@ -25,10 +25,28 @@ class Twig extends modParser
     /** @var callable[] */
     private array $initializers = [];
     private ?ModxRuntime $runtime = null;
+    private int $renderDepth = 0;
+    private const MAX_RENDER_DEPTH = 5;
+    private const MAX_OUTPUT_SIZE = 5_242_880; // 5MB
+    private ?modParser $wrappedParser = null;
 
     public function __construct(modX &$modx)
     {
         parent::__construct($modx);
+    }
+
+    /**
+     * Install this parser as $modx->parser, wrapping the existing parser
+     * so that Twig renders first and the original parser (e.g. pdoTools)
+     * handles MODX tags and Fenom afterwards.
+     */
+    public function decorateParser(): void
+    {
+        $current = $this->modx->parser;
+        if ($current !== $this && $current instanceof modParser) {
+            $this->wrappedParser = $current;
+        }
+        $this->modx->parser = $this;
     }
 
     /**
@@ -55,22 +73,25 @@ class Twig extends modParser
         $tokens = array(),
         $depth = 0
     ) {
+        // Render Twig on uncacheable content outside the manager, but only
+        // when the content is small enough to be a raw template or chunk.
+        // Assembled page content (with ContentBlocks dump output etc.) is
+        // much larger and would cause double-rendering or OOM.
         if (is_string($content) && $processUncacheable
-            && $this->modx->context->key !== 'mgr') {
-            $this->init();
-            $_processingUncacheable = $this->_processingUncacheable;
-            $this->_processingUncacheable = true;
-            $content = $this->renderString($content, []
-//                array_merge(array_filter(
-//                    $this->modx->placeholders,
-//                    fn($v, $k) => !str_starts_with($k, '+'),
-//                    ARRAY_FILTER_USE_BOTH
-//                ), ['modx' => $this->modx])
-            ); //
-            $this->_processingUncacheable = $_processingUncacheable;
+            && $this->modx->context->key !== 'mgr'
+            && strlen($content) <= self::MAX_OUTPUT_SIZE
+            && self::containsTwigSyntax($content)) {
+            $content = $this->renderString($content, []);
         }
 
-        return parent::processElementTags($parentTag, $content, $processUncacheable, $removeUnprocessed, $prefix,
+        $delegate = $this->wrappedParser ?? $this;
+        if ($delegate === $this) {
+            return parent::processElementTags($parentTag, $content, $processUncacheable, $removeUnprocessed, $prefix,
+                $suffix, $tokens, $depth
+            );
+        }
+
+        return $delegate->processElementTags($parentTag, $content, $processUncacheable, $removeUnprocessed, $prefix,
             $suffix, $tokens, $depth
         );
     }
@@ -78,7 +99,10 @@ class Twig extends modParser
 
     public function getElement($class, $name)
     {
-        $obj = parent::getElement($class, $name);
+        $obj = $this->wrappedParser
+            ? $this->wrappedParser->getElement($class, $name)
+            : parent::getElement($class, $name);
+
         if ($obj instanceof modChunk) {
             return new modChunkTwig($obj, $this);
         }
@@ -97,7 +121,7 @@ class Twig extends modParser
             'cache' => $cachePath,
             'auto_reload' => true,
         ]);
-        $this->twig->addExtension(new DebugExtension());
+        $this->twig->addExtension(new ModxDebugExtension($this->modx));
         $this->twig->addExtension(new ModxExtension($this->getRuntime()));
         $this->syncGlobals();
         $this->applyInitializers();
@@ -110,12 +134,41 @@ class Twig extends modParser
 
     public function renderString(string $content, array $placeholders)
     {
-        $this->init();
-        $this->syncGlobals();
-        return $this->twig->render(
-            $this->twig->createTemplate($content),
-            $placeholders
-        );
+        if (!self::containsTwigSyntax($content)) {
+            return $content;
+        }
+
+        if ($this->renderDepth >= self::MAX_RENDER_DEPTH) {
+            $this->modx->log(xPDO::LOG_LEVEL_WARN, '[Twig] Maximum render depth (' . self::MAX_RENDER_DEPTH . ') reached, skipping Twig rendering to prevent recursion.');
+            return $content;
+        }
+
+        $this->renderDepth++;
+        try {
+            $this->init();
+            $this->syncGlobals();
+            $result = $this->twig->render(
+                $this->twig->createTemplate($content),
+                $placeholders
+            );
+
+            if (strlen($result) > self::MAX_OUTPUT_SIZE) {
+                $this->modx->log(xPDO::LOG_LEVEL_ERROR, '[Twig] Rendered output (' . number_format(strlen($result)) . ' bytes) exceeds ' . number_format(self::MAX_OUTPUT_SIZE) . ' byte limit. This is usually caused by {{ dump(_context) }} or similar calls that serialize large objects. Use {{ dump(variable_name) }} instead.');
+                return $content;
+            }
+
+            return $result;
+        } catch (\Twig\Error\Error $e) {
+            $this->modx->log(xPDO::LOG_LEVEL_ERROR, '[Twig] ' . $e->getMessage());
+            return $content;
+        } finally {
+            $this->renderDepth--;
+        }
+    }
+
+    public static function containsTwigSyntax(string $content): bool
+    {
+        return str_contains($content, '{{') || str_contains($content, '{%') || str_contains($content, '{#');
     }
 
     public function getEnvironment(): Environment
