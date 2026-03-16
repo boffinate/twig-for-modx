@@ -1,6 +1,6 @@
 # Twig for MODX
 
-Use Twig template syntax inside MODX templates, chunks, resources, and ContentBlocks fields -- without replacing the MODX parser.
+The Twig for MODX Extra adds Twig template support to your normal MODX workflow. It does not replace MODX rendering. Instead it runs a Twig pass inside the existing MODX parser cycle, so you can mix Twig expressions with standard MODX tags in templates, chunks, resources, and snippet output.
 
 ```twig
 <h1>{{ resource.pagetitle|upper }}</h1>
@@ -9,6 +9,8 @@ Use Twig template syntax inside MODX templates, chunks, resources, and ContentBl
 {% endif %}
 {{ chunk('HeroCta', {'label': 'Buy now'}) }}
 ```
+
+Twig is evaluated before the final MODX tag pass. After Twig renders, MODX still processes its own tags (`[[*pagetitle]]`, `[[+placeholder]]`, `[[Snippet]]`, `[[$Chunk]]`).
 
 ## Documentation
 
@@ -27,6 +29,7 @@ Use Twig template syntax inside MODX templates, chunks, resources, and ContentBl
 ## Requirements
 
 - MODX 3
+- PHP 8.1+
 - Twig 3 (bundled with the extra)
 
 ## Optional Extras

@@ -1,16 +1,4 @@
-# Using the Twig Extra
-
-## What It Does
-
-The Twig Extra adds Twig template syntax to your normal MODX workflow. It does not replace MODX rendering. Instead it runs a Twig pass inside the existing MODX parser cycle, so you can mix Twig expressions with standard MODX tags in templates, chunks, resources, and snippet output.
-
-```html
-<h1>{{ resource.pagetitle|upper }}</h1>
-<p>[[*introtext]]</p>
-{{ chunk('HeroCta', {'label': 'Buy now'}) }}
-```
-
-Twig is evaluated before the final MODX tag pass. After Twig renders, MODX still processes its own tags (`[[*pagetitle]]`, `[[+placeholder]]`, `[[Snippet]]`, `[[$Chunk]]`).
+# Getting Started
 
 ## Installation
 

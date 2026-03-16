@@ -2,6 +2,8 @@
 
 Twig template syntax for MODX 3. Conditionals, loops, filters, and auto-escaping in your templates, chunks, and resources.
 
+**[Full documentation](https://boffinate.github.io/twig-for-modx/)**
+
 ```twig
 <h1>{{ resource.pagetitle|upper }}</h1>
 {% if resource.HeroImage %}
