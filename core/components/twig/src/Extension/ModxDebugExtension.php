@@ -16,7 +16,7 @@ use Twig\TwigFunction;
 
 /**
  * Replaces Twig's built-in DebugExtension with a version that excludes
- * globals (modx, resource, placeholders, modx_runtime) from context dump()
+ * globals (modx, resource, placeholders) from context dump()
  * calls so that {{ dump() }} and {{ dump(_context) }} answer "what variables
  * does this template have?" rather than listing things that are always available.
  *

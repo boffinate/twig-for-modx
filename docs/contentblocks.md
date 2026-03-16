@@ -404,7 +404,7 @@ Call `dump()` with no arguments to see every variable available in the current t
 {{ dump() }}
 ```
 
-This shows only the ContentBlocks field placeholders -- globals like `modx`, `resource`, `placeholders`, and `modx_runtime` are excluded from no-arg dumps because they are always present and would obscure the field data you are looking for. To inspect a global, dump it explicitly:
+This shows only the ContentBlocks field placeholders -- globals like `modx`, `resource`, and `placeholders` are excluded from no-arg dumps because they are always present and would obscure the field data you are looking for. To inspect a global, dump it explicitly:
 
 ```twig
 {{ dump(resource) }}

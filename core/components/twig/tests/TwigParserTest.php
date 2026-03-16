@@ -275,12 +275,11 @@ class TwigParserTest extends ParserTestCase
     public function test_dump_with_no_args_outputs_template_variables_only(): void
     {
         // dump() with no args should show template-specific variables but
-        // exclude always-present globals (modx, resource, placeholders, modx_runtime).
+        // exclude always-present globals (modx, resource, placeholders).
         $twig = $this->modx->services->get('twigparser');
         $output = $twig->renderString('{{ dump() }}', ['test_var' => 'visible']);
         $this->assertStringContainsString('test_var', $output);
         $this->assertStringContainsString('visible', $output);
-        $this->assertStringNotContainsString('modx_runtime', $output);
     }
 
     public function test_dump_modx_output_size(): void

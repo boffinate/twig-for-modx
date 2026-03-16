@@ -160,14 +160,6 @@ An array of all currently set MODX placeholders.
 {{ placeholders.hero_title|default('No title') }}
 ```
 
-### modx_runtime
-
-The shared runtime helper. Gives access to all the built-in functions as methods. Useful in edge cases but rarely needed in templates since the standalone functions are more readable.
-
-```twig
-{{ modx_runtime.option('site_url') }}
-```
-
 ## Twig Filters
 
 All standard Twig filters work. Some commonly useful ones:
@@ -416,13 +408,12 @@ The Twig debug extension is controlled by the `twig.debug` system setting (enabl
 
 With no arguments, `dump()` shows every variable that was passed to the current template. This is the quickest way to find out what data you have to work with.
 
-Globals (`modx`, `resource`, `placeholders`, `modx_runtime`) are **excluded** from no-arg `dump()` output because they are always present and would obscure the template-specific data you are looking for. To inspect a global, dump it explicitly:
+Globals (`modx`, `resource`, `placeholders`) are **excluded** from no-arg `dump()` output because they are always present and would obscure the template-specific data you are looking for. To inspect a global, dump it explicitly:
 
 ```twig
 {{ dump(modx) }}
 {{ dump(resource) }}
 {{ dump(placeholders) }}
-{{ dump(modx_runtime) }}
 ```
 
 ### What you see when dumping modx

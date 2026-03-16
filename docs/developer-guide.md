@@ -46,7 +46,7 @@ $html = $twig->renderString('<h1>{{ title }}</h1><p>{{ body }}</p>', [
 
 The second argument is an array of variables that become available in the template. These are the template's local context -- the same as ContentBlocks' `$phs` or the properties you would pass to a chunk.
 
-The four globals (`resource`, `modx`, `placeholders`, `modx_runtime`) are always available in addition to the variables you pass.
+The three globals (`resource`, `modx`, `placeholders`) are always available in addition to the variables you pass.
 
 ### Rendering with data from your extra
 

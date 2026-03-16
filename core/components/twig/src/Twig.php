@@ -30,7 +30,7 @@ class Twig extends ParserBase
     private ?ResourceAccessor $resourceAccessor = null;
     private ?modResource $lastResource = null;
 
-    public const GLOBAL_KEYS = ['modx', 'resource', 'placeholders', 'modx_runtime'];
+    public const GLOBAL_KEYS = ['modx', 'resource', 'placeholders'];
 
     public function __construct(modX &$modx)
     {
@@ -253,7 +253,7 @@ class Twig extends ParserBase
         $this->twig->addGlobal('modx', $this->modx);
         $this->twig->addGlobal('resource', $this->wrapResource());
         $this->twig->addGlobal('placeholders', $this->modx->placeholders ?? []);
-        $this->twig->addGlobal('modx_runtime', $this->getRuntime());
+
     }
 
     private function wrapResource(): ?ResourceAccessor

@@ -149,14 +149,13 @@ The addon exposes these globals:
 
 - `modx`
 - `placeholders`
-- `modx_runtime`
 
 Examples:
 
 ```twig
 Current resource id: {{ modx.resource.id }}
 Current placeholder: {{ placeholders.hero_title|default('None') }}
-Current site URL: {{ modx_runtime.option('site_url') }}
+Current site URL: {{ option('site_url') }}
 ```
 
 Use `modx` sparingly. It is powerful, but it also couples templates tightly to raw MODX internals. In most templates, the helper functions are a better default.

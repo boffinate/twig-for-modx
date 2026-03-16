@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Remove `modx_runtime` Twig global. All its methods are available as Twig functions (`chunk()`, `snippet()`, `option()`, `link()`, etc.)
+
 ## 0.6.0-pl
 
 - Extend pdoTools Parser directly when pdoTools is installed, removing the wrapper/delegate pattern
