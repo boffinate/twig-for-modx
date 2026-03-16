@@ -21,6 +21,12 @@ echo "Git tag: ${tag}"
 # ---------------------------------------------------------------------------
 changelog="${repo_root}/CHANGELOG.md"
 
+if grep -qi "^## .*unreleased" "${changelog}"; then
+    echo "ERROR: CHANGELOG.md still contains an Unreleased section." >&2
+    echo "       Move those notes under '## ${full}' before releasing." >&2
+    exit 1
+fi
+
 if ! grep -q "^## ${full}\$" "${changelog}"; then
     echo "ERROR: No '## ${full}' heading found in CHANGELOG.md" >&2
     exit 1

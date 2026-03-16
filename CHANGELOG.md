@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0-pl
 
 - Add `twig.debug` system setting to control debug mode (enabled by default). When disabled, `dump()` returns nothing and the debug extension is not loaded
 - Move VarDumper from dev dependency to runtime dependency so it is always available when debug is on
