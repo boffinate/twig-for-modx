@@ -2,6 +2,7 @@
 /** @var MODX\Revolution\modX $modx */
 
 require_once MODX_CORE_PATH . 'components/twig/vendor/autoload.php';
+require_once MODX_CORE_PATH . 'components/twig/src/ParserBase.php';
 
 // Add factories
 $modx->services[Boffinate\Twig\Twig::class] = $modx->services->factory(function ($c) use ($modx) {

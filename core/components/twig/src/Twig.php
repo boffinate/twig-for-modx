@@ -9,14 +9,13 @@ use Boffinate\Twig\Proxy\modChunkTwig;
 use Boffinate\Twig\Proxy\ResourceAccessor;
 use Boffinate\Twig\Support\ModxRuntime;
 use MODX\Revolution\modChunk;
-use MODX\Revolution\modParser;
 use MODX\Revolution\modResource;
 use MODX\Revolution\modX;
 use Twig\Environment;
 use Twig\Extension\ExtensionInterface;
 use xPDO\xPDO;
 
-class Twig extends modParser
+class Twig extends ParserBase
 {
     /** @var modX $modx */
     public $modx;
@@ -28,7 +27,6 @@ class Twig extends modParser
     private int $renderDepth = 0;
     private const MAX_RENDER_DEPTH = 5;
     private const MAX_OUTPUT_SIZE = 5_242_880; // 5MB
-    private ?modParser $wrappedParser = null;
     private ?ResourceAccessor $resourceAccessor = null;
     private ?modResource $lastResource = null;
 
@@ -36,20 +34,20 @@ class Twig extends modParser
 
     public function __construct(modX &$modx)
     {
-        parent::__construct($modx);
+        if ($this instanceof \ModxPro\PdoTools\Parsing\Parser) {
+            parent::__construct($modx, $modx->services->get('pdotools'));
+        } else {
+            parent::__construct($modx);
+        }
     }
 
     /**
-     * Install this parser as $modx->parser, wrapping the existing parser
-     * so that Twig renders first and the original parser (e.g. pdoTools)
-     * handles MODX tags and Fenom afterwards.
+     * Install this parser as $modx->parser so that Twig renders first
+     * and the parent parser (pdoTools or core) handles MODX tags and
+     * Fenom afterwards.
      */
     public function decorateParser(): void
     {
-        $current = $this->modx->parser;
-        if ($current !== $this && $current instanceof modParser) {
-            $this->wrappedParser = $current;
-        }
         $this->modx->parser = $this;
     }
 
@@ -88,14 +86,7 @@ class Twig extends modParser
             $content = $this->renderString($content, []);
         }
 
-        $delegate = $this->wrappedParser ?? $this;
-        if ($delegate === $this) {
-            return parent::processElementTags($parentTag, $content, $processUncacheable, $removeUnprocessed, $prefix,
-                $suffix, $tokens, $depth
-            );
-        }
-
-        return $delegate->processElementTags($parentTag, $content, $processUncacheable, $removeUnprocessed, $prefix,
+        return parent::processElementTags($parentTag, $content, $processUncacheable, $removeUnprocessed, $prefix,
             $suffix, $tokens, $depth
         );
     }
@@ -103,9 +94,7 @@ class Twig extends modParser
 
     public function getElement($class, $name)
     {
-        $obj = $this->wrappedParser
-            ? $this->wrappedParser->getElement($class, $name)
-            : parent::getElement($class, $name);
+        $obj = parent::getElement($class, $name);
 
         if ($obj instanceof modChunk) {
             return new modChunkTwig($obj, $this);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0-pl
+
+- Extend pdoTools Parser directly when pdoTools is installed, removing the wrapper/delegate pattern
+- Fenom and MODX tag processing now runs through the native parent class chain instead of a wrapped parser instance
+- Falls back to extending modParser when pdoTools is not available
+- Fix tests to account for Fenom post-processing of content
+
 ## 0.5.0-pl
 
 - Add `twig.debug` system setting to control debug mode (enabled by default). When disabled, `dump()` returns nothing and the debug extension is not loaded

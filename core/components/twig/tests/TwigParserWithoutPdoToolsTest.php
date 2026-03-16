@@ -27,7 +27,14 @@ class TwigParserWithoutPdoToolsTest extends ParserTestCase
 
     protected function loadPdoTools(): void
     {
-        // No-op: simulate PDOTools not being installed
+        // Simulate PDOTools not being installed by disabling Fenom.
+        // ParserBase is resolved via class_alias at load time, so in a test
+        // suite where pdoTools classes exist on disk, Twig always extends the
+        // pdoTools Parser. Disabling Fenom replicates the behaviour of the
+        // modParser-only code path (no Fenom processing).
+        if ($this->modx->services->has('pdotools')) {
+            $this->modx->services->get('pdotools')->config(['useFenomParser' => false]);
+        }
     }
 
     public function test_twig_parser_extends_mod_parser_not_pdotools(): void

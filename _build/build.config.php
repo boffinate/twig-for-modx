@@ -12,7 +12,7 @@ return [
     'name' => 'twig',
     'display_name' => 'Twig',
     'namespace' => 'twig',
-    'version' => '0.5.0',
+    'version' => '0.6.0',
     'release' => 'pl',
     'repo_root' => $repoRoot,
     'modx_base_path' => rtrim($modxBasePath, '/\\') . '/',

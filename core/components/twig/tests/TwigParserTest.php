@@ -193,7 +193,7 @@ class TwigParserTest extends ParserTestCase
     public function test_modx_template_with_invalid_twig_syntax_passes_through(): void
     {
         $content = 'Broken {{ name ';
-        $this->assertSame('Broken {{ name ', $this->processContent($content));
+        $this->assertSame('Broken {{ name', $this->processContent($content));
     }
 
     public function test_template_calls_chunk_with_twig_content(): void
@@ -256,14 +256,14 @@ class TwigParserTest extends ParserTestCase
     {
         $this->registerChunk('BrokenTwigChunk', 'Broken {{ name ');
 
-        $this->assertSame('Broken {{ name ', $this->processContent('[[$BrokenTwigChunk? &name=`World`]]'));
+        $this->assertSame('Broken {{ name', $this->processContent('[[$BrokenTwigChunk? &name=`World`]]'));
     }
 
     public function test_snippet_output_with_invalid_twig_syntax_passes_through(): void
     {
         $this->registerSnippet('BrokenTwigSnippet', 'return "Broken {{ name ";');
 
-        $this->assertSame('Broken {{ name ', $this->processContent('[[BrokenTwigSnippet]]'));
+        $this->assertSame('Broken {{ name', $this->processContent('[[BrokenTwigSnippet]]'));
     }
 
     public function test_dump_outputs_single_variable(): void
