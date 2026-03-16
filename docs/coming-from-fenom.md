@@ -23,16 +23,12 @@ If you have been using pdoTools' Fenom syntax (`{$_modx->...}`, `{$_pls}`, etc.)
 
 ### Template Variables
 
-Fenom does not provide direct TV access on the resource object. pdoTools uses FastField tags (`{$_modx->resource.tv_name}` does not work for TVs in Fenom).
-
-Twig unifies resource fields and TVs on the `resource` global:
-
 | Fenom | Twig |
 |-------|------|
-| `{'*tv_name'\|resource}` or manual snippet | `{{ resource.MyTV }}` |
-| (no equivalent) | `{{ resource.tvRawValue('MyTV') }}` |
+| `{$_modx->resource.tv_name}` | `{{ resource.tv_name }}` |
+| (no equivalent) | `{{ resource.tvRawValue('tv_name') }}` |
 
-The `resource` global returns processed TV values by default (same as `[[*MyTV]]`). Use `tvRawValue()` when you need the raw stored value before MODX applies output rendering.
+Both return processed TV values by default (same as `[[*tv_name]]`). In Twig, use `tvRawValue()` when you need the raw stored value before MODX applies output rendering.
 
 ### Snippets
 
