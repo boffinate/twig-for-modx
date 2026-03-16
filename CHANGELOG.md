@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0-pl
+
+- Install Twig as a parser decorator so Twig syntax renders automatically in templates, chunks, resource content, and snippet output — no longer limited to ContentBlocks
+- Twig renders before MODX tags and Fenom, so `{{ }}` and `{% %}` do not conflict with pdoTools
+- Custom `dump()` that filters globals from no-arg and `_context` dumps, showing only template-specific variables
+- VarDumper casters for modX and xPDO: useful properties (config, resource, request, response, user, placeholders) are expandable, framework internals shown as collapsed stubs
+- Dump output rendered in an iframe to isolate VarDumper JS/CSS from Fenom parsing
+- Safety guards: skip Twig pass on content without Twig syntax, recursion depth limit, 5 MB output size limit, graceful handling of invalid Twig syntax
+- Fix plugin output to use `$modx->event->_output` (correct MODX convention)
+
 ## 0.3.0-pl
 
 - Add `resource` global for unified access to resource fields and Template Variables
