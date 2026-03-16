@@ -410,13 +410,14 @@ If template changes do not appear after editing, clear the MODX cache. Make sure
 
 ## Debugging with dump()
 
-The Twig debug extension is enabled by default. The `dump()` function outputs a `var_dump` of any variable, or of the entire template context when called with no arguments.
+The Twig debug extension is enabled by default. The `dump()` function outputs a variable inspection, or the template's own variables when called with no arguments. When Symfony VarDumper is installed (it is included as a dev dependency), you get interactive, collapsible HTML output rendered inside an iframe, instead of plain `var_dump`.
 
 ### Dump a single variable
 
 ```twig
+{{ dump(value) }}
+{{ dump(row_data) }}
 {{ dump(placeholders) }}
-{{ dump(modx.resource) }}
 ```
 
 ### Dump everything available in the template
@@ -425,16 +426,31 @@ The Twig debug extension is enabled by default. The `dump()` function outputs a 
 {{ dump() }}
 ```
 
-With no arguments, `dump()` shows every variable in the current template context. This is the quickest way to find out what data you have to work with.
+With no arguments, `dump()` shows every variable that was passed to the current template. This is the quickest way to find out what data you have to work with.
 
-**Caution in normal templates:** In a standard MODX template or chunk, the context includes the `modx` global (the full MODX instance) and `modx_runtime`. Dumping these produces a very large output that can hang the page or exhaust memory. In normal templates, dump specific variables instead:
+Globals (`modx`, `resource`, `placeholders`, `modx_runtime`) are **excluded** from no-arg `dump()` output because they are always present and would obscure the template-specific data you are looking for. To inspect a global, dump it explicitly:
 
 ```twig
+{{ dump(modx) }}
+{{ dump(resource) }}
 {{ dump(placeholders) }}
-{{ dump(field('pagetitle')) }}
+{{ dump(modx_runtime) }}
 ```
 
-**In ContentBlocks templates** this is not a problem. The ContentBlocks plugin calls `renderString()` directly with just the field placeholders, so `dump()` only shows the ContentBlocks data. See the [ContentBlocks guide](./contentblocks.md#inspecting-available-variables) for details and example output.
+### What you see when dumping modx
+
+`dump(modx)` shows all properties of the MODX instance, but only the ones useful for template work are expandable:
+
+- `config` -- all system settings (expandable)
+- `context` -- the current context object (expandable)
+- `resource` -- the current resource (expandable)
+- `request` -- the modRequest object (expandable)
+- `response` -- the modResponse object (expandable)
+- `user` -- the current user (expandable)
+- `placeholders` -- all set placeholders (expandable)
+- `version`, `cultureKey`, `resourceIdentifier`, `resourceMethod`, `site_id`, `uuid` -- scalar metadata (always visible)
+
+Framework internals (`pdo`, `driver`, `cacheManager`, `classMap`, `services`, etc.) are still listed but shown as collapsed stubs -- you can see their type but cannot expand them. This keeps the dump readable and prevents memory issues from serialising the entire MODX runtime.
 
 ### Block form
 
@@ -444,6 +460,17 @@ The block form writes output to the Symfony dump collector if available, but in 
 {% dump value %}
 {% dump row_data %}
 ```
+
+### Output size limits
+
+Two safety measures prevent memory exhaustion from large dumps:
+
+- **Per-dump limit (2 MB):** If a single `dump()` call produces more than 2 MB of HTML, it is replaced with a truncation message. Dump specific variables instead of the full context to stay under this limit.
+- **Per-render limit (5 MB):** If a single `renderString()` call produces more than 5 MB of total output, Twig discards the result and returns the original template. Check the MODX error log for details when this happens.
+
+### Fenom compatibility
+
+When pdoTools Fenom is enabled, dump output is rendered inside an `<iframe>` with `srcdoc` to isolate VarDumper's JavaScript and CSS from Fenom's `{` parser. This happens automatically -- no configuration needed. The iframe auto-resizes as you expand and collapse dump nodes.
 
 ### Remove dump() before going live
 

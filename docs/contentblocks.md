@@ -394,7 +394,7 @@ Repeater sub-fields: `tab_title`, `tab_content`
 
 ## Inspecting Available Variables
 
-The Twig debug extension is enabled by default. Use `dump()` to see what data ContentBlocks is passing to your template. This is safe to do in ContentBlocks templates because the plugin renders with just the field placeholders, not the entire MODX instance, so the output stays a manageable size.
+Use `dump()` to see what data ContentBlocks is passing to your template.
 
 ### Dump everything
 
@@ -403,6 +403,15 @@ Call `dump()` with no arguments to see every variable available in the current t
 ```twig
 {{ dump() }}
 ```
+
+This shows only the ContentBlocks field placeholders -- globals like `modx`, `resource`, `placeholders`, and `modx_runtime` are excluded from no-arg dumps because they are always present and would obscure the field data you are looking for. To inspect a global, dump it explicitly:
+
+```twig
+{{ dump(resource) }}
+{{ dump(modx) }}
+```
+
+See the [dump() reference in the usage guide](./usage.md#debugging-with-dump) for more details.
 
 ### Dump a single variable
 
@@ -459,8 +468,8 @@ The `row_data` array is only present when the [ContentBlocks patch](#required-co
 ### Tips
 
 - Put `{{ dump() }}` at the top of a template you are building to get a quick reference of what variables are available, then remove it when you are done.
-- If the output is hard to read on the page, view the page source or wrap it in `<pre>` tags: `<pre>{{ dump() }}</pre>`.
-- The output uses PHP's `var_dump` format. Array keys are the variable names you use in Twig (`{{ heading }}`, `{{ row.body }}`, etc.).
+- When Symfony VarDumper is installed (included as a dev dependency), the dump renders as interactive, collapsible HTML inside an iframe. You can expand and collapse nodes to explore the data. Otherwise it uses PHP's `var_dump` format in a `<pre>` block.
+- Array keys are the variable names you use in Twig (`{{ heading }}`, `{{ row.body }}`, etc.).
 - Remove all `dump()` calls before going to production.
 
 ## Using MODX Functions Inside ContentBlocks Templates

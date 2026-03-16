@@ -103,11 +103,11 @@ See [HTML Escaping](./usage.md#html-escaping) for details.
 
 **Fix:** This normally works automatically. If it does not, check that the snippet is returning a string (not echoing it), and that the Twig parser is active (the `twig` namespace is registered and the bootstrap loaded).
 
-### pdoTools not installed
+### pdoTools / Fenom compatibility
 
 **Symptom:** You want to use pdoTools features (Fenom templates, pdoFetch, FastField tags) alongside Twig.
 
-**Note:** pdoTools is optional. The Twig Extra works without it. If you need pdoTools features, install it through the MODX package manager. Both extras coexist without conflict -- see [How It Works](how-it-works.md) for details.
+**Note:** pdoTools is optional. The Twig Extra works without it. If you need pdoTools features, install it through the MODX package manager. Twig decorates the pdoTools parser so both coexist -- Twig renders `{{ }}` first, then pdoTools handles MODX tags and Fenom. See [How It Works](how-it-works.md) for details.
 
 ## Coming from MODX Tags
 
