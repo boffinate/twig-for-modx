@@ -120,12 +120,15 @@ class Twig extends modParser
         $cachePath = $this->getCachePath();
         $loader = new \Twig\Loader\ArrayLoader([
         ]);
+        $debug = (bool) $this->modx->getOption('twig.debug', null, true);
         $this->twig = new \Twig\Environment($loader, [
-            'debug' => true,
+            'debug' => $debug,
             'cache' => $cachePath,
             'auto_reload' => true,
         ]);
-        $this->twig->addExtension(new ModxDebugExtension($this->modx));
+        if ($debug) {
+            $this->twig->addExtension(new ModxDebugExtension($this->modx));
+        }
         $this->twig->addExtension(new ModxExtension($this->getRuntime()));
         $this->applyInitializers();
         $this->modx->invokeEvent('OnTwigInit', [

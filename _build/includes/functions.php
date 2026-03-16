@@ -7,6 +7,7 @@ use MODX\Revolution\modEvent;
 use MODX\Revolution\modPlugin;
 use MODX\Revolution\modPluginEvent;
 use MODX\Revolution\modSnippet;
+use MODX\Revolution\modSystemSetting;
 use MODX\Revolution\modTemplate;
 use MODX\Revolution\modX;
 
@@ -89,6 +90,21 @@ function twigBuildAssetsResolverDefinition(array $config): ?array
         'source' => rtrim($config['component_assets_path'], '/\\'),
         'target' => "return MODX_ASSETS_PATH . 'components/';",
     ];
+}
+
+function twigBuildCreateSystemSetting(modX $modx, array $definition): modSystemSetting
+{
+    $setting = $modx->newObject(modSystemSetting::class);
+    $setting->fromArray([
+        'key' => $definition['key'],
+        'value' => $definition['value'] ?? '',
+        'xtype' => $definition['xtype'] ?? 'textfield',
+        'namespace' => $definition['namespace'] ?? 'twig',
+        'area' => $definition['area'] ?? 'general',
+        'editedon' => null,
+    ], '', true, true);
+
+    return $setting;
 }
 
 function twigBuildCreateEvent(modX $modx, array $definition): modEvent

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Add `twig.debug` system setting to control debug mode (enabled by default). When disabled, `dump()` returns nothing and the debug extension is not loaded
+- Move VarDumper from dev dependency to runtime dependency so it is always available when debug is on
+- Cache ResourceAccessor across renders so TV lookups are not repeated per chunk
+- Unify ResourceAccessor property resolution to avoid double lookups from Twig's `__isset` + `__get` calls
+- Cache ReflectionClass in chunk proxy instead of recreating on every property access
+- Cache `parser_max_iterations` setting in ModxRuntime
+- Define global keys once as a constant on Twig, referenced from ModxDebugExtension
+- Remove redundant `syncGlobals()` call during initialisation
+
 ## 0.4.0-pl
 
 - Install Twig as a parser decorator so Twig syntax renders automatically in templates, chunks, resource content, and snippet output — no longer limited to ContentBlocks

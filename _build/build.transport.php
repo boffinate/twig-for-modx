@@ -34,6 +34,17 @@ foreach (require __DIR__ . '/data/transport.events.php' as $definition) {
     $modx->log(modX::LOG_LEVEL_INFO, 'Packaged event: ' . $definition['name']);
 }
 
+$settingAttributes = [
+    xPDOTransport::UNIQUE_KEY => 'key',
+    xPDOTransport::PRESERVE_KEYS => true,
+    xPDOTransport::UPDATE_OBJECT => false,
+];
+
+foreach (require __DIR__ . '/data/transport.system_settings.php' as $definition) {
+    $builder->putVehicle($builder->createVehicle(twigBuildCreateSystemSetting($modx, $definition), $settingAttributes));
+    $modx->log(modX::LOG_LEVEL_INFO, 'Packaged system setting: ' . $definition['key']);
+}
+
 $category = twigBuildCreateCategory($modx, $config);
 $categoryAttributes = [
     xPDOTransport::UNIQUE_KEY => 'category',

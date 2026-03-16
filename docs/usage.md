@@ -398,7 +398,7 @@ If template changes do not appear after editing, clear the MODX cache. Make sure
 
 ## Debugging with dump()
 
-The Twig debug extension is enabled by default. The `dump()` function outputs a variable inspection, or the template's own variables when called with no arguments. When Symfony VarDumper is installed (it is included as a dev dependency), you get interactive, collapsible HTML output rendered inside an iframe, instead of plain `var_dump`.
+The Twig debug extension is controlled by the `twig.debug` system setting (enabled by default). The `dump()` function outputs a variable inspection, or the template's own variables when called with no arguments. When Symfony VarDumper is installed (it is included as a dev dependency), you get interactive, collapsible HTML output rendered inside an iframe, instead of plain `var_dump`.
 
 ### Dump a single variable
 
@@ -462,4 +462,4 @@ When pdoTools Fenom is enabled, dump output is rendered inside an `<iframe>` wit
 
 ### Remove dump() before going live
 
-`dump()` only works when debug mode is enabled (it is by default in this extra). Remove all `dump()` calls before deploying to production.
+`dump()` only works when `twig.debug` is enabled (it is by default). Set `twig.debug` to false in production -- `dump()` calls will silently return nothing, but it is still good practice to remove them from production templates.
