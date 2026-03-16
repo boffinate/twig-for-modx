@@ -12,3 +12,7 @@ $modx->services[Boffinate\Twig\Twig::class] = $modx->services->factory(function 
 $modx->services->add('twigparser', function ($c) use ($modx) {
     return $c->get(\Boffinate\Twig\Twig::class);
 });
+
+// Install as $modx->parser, wrapping the existing parser (pdoTools or core)
+// so Twig renders {{ }}/{% %} before MODX tags and Fenom are processed.
+$modx->services->get('twigparser')->decorateParser();

@@ -190,12 +190,10 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame('Match Resource Match Resource', $this->processContent($content));
     }
 
-    public function test_modx_template_with_invalid_twig_syntax_throws(): void
+    public function test_modx_template_with_invalid_twig_syntax_passes_through(): void
     {
-        $this->expectException(SyntaxError::class);
-
         $content = 'Broken {{ name ';
-        $this->processContent($content);
+        $this->assertSame('Broken {{ name ', $this->processContent($content));
     }
 
     public function test_template_calls_chunk_with_twig_content(): void
@@ -254,20 +252,18 @@ class TwigParserTest extends ParserTestCase
         $this->assertInstanceOf(Twig::class, $service);
     }
 
-    public function test_chunk_output_with_invalid_twig_syntax_throws(): void
+    public function test_chunk_output_with_invalid_twig_syntax_passes_through(): void
     {
         $this->registerChunk('BrokenTwigChunk', 'Broken {{ name ');
 
-        $this->expectException(SyntaxError::class);
-        $this->processContent('[[$BrokenTwigChunk? &name=`World`]]');
+        $this->assertSame('Broken {{ name ', $this->processContent('[[$BrokenTwigChunk? &name=`World`]]'));
     }
 
-    public function test_snippet_output_with_invalid_twig_syntax_throws(): void
+    public function test_snippet_output_with_invalid_twig_syntax_passes_through(): void
     {
         $this->registerSnippet('BrokenTwigSnippet', 'return "Broken {{ name ";');
 
-        $this->expectException(SyntaxError::class);
-        $this->processContent('[[BrokenTwigSnippet]]');
+        $this->assertSame('Broken {{ name ', $this->processContent('[[BrokenTwigSnippet]]'));
     }
 
     public function test_dump_outputs_single_variable(): void
@@ -276,16 +272,41 @@ class TwigParserTest extends ParserTestCase
         $this->assertStringContainsString('hello', $output);
     }
 
-    public function test_dump_with_no_args_outputs_all_context_variables(): void
+    public function test_dump_with_no_args_outputs_template_variables_only(): void
     {
-        // dump() with no args var_dumps the entire context including the modx object.
-        // In processContent the Twig pass happens inside processElementTags which
-        // replaces $content in-place. If the output is very large the MODX parser
-        // may strip or truncate it. Test via renderString directly.
+        // dump() with no args should show template-specific variables but
+        // exclude always-present globals (modx, resource, placeholders, modx_runtime).
         $twig = $this->modx->services->get('twigparser');
         $output = $twig->renderString('{{ dump() }}', ['test_var' => 'visible']);
         $this->assertStringContainsString('test_var', $output);
         $this->assertStringContainsString('visible', $output);
+        $this->assertStringNotContainsString('modx_runtime', $output);
+    }
+
+    public function test_dump_modx_output_size(): void
+    {
+        $twig = $this->modx->services->get('twigparser');
+        $output = $twig->renderString('{{ dump(modx) }}', []);
+        $bytes = strlen($output);
+        printf("\n[dump(modx)] output size: %s bytes (%s KB)\n", number_format($bytes), number_format($bytes / 1024, 1));
+        $this->assertNotEmpty($output);
+        $this->assertLessThan(1_048_576, $bytes, 'dump(modx) should stay under the 1MB render limit');
+    }
+
+    public function test_dump_resource_output_size(): void
+    {
+        $resource = $this->modx->newObject(\MODX\Revolution\modResource::class);
+        $resource->set('id', 1);
+        $resource->set('pagetitle', 'Test Page');
+        $this->modx->resource = $resource;
+
+        // renderString syncs globals on each call, so the resource will be picked up
+        $twig = $this->modx->services->get('twigparser');
+        $output = $twig->renderString('{{ dump(resource) }}', []);
+        $bytes = strlen($output);
+        printf("\n[dump(resource)] output size: %s bytes (%s KB)\n", number_format($bytes), number_format($bytes / 1024, 1));
+        $this->assertNotEmpty($output);
+        $this->assertLessThan(1_048_576, $bytes, 'dump(resource) should stay under the 1MB render limit');
     }
 
     public function test_contentblocks_dump_shows_all_field_variables(): void

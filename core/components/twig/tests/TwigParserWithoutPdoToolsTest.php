@@ -109,11 +109,9 @@ class TwigParserWithoutPdoToolsTest extends ParserTestCase
         $this->assertSame('configured Site name', $this->processContent($content));
     }
 
-    public function test_invalid_twig_syntax_throws_without_pdotools(): void
+    public function test_invalid_twig_syntax_passes_through_without_pdotools(): void
     {
-        $this->expectException(SyntaxError::class);
-
-        $this->processContent('Broken {{ name ');
+        $this->assertSame('Broken {{ name ', $this->processContent('Broken {{ name '));
     }
 
     public function test_snippet_output_with_twig_is_rendered_without_pdotools(): void
