@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.7.0-pl
 
+- Upgrade Twig from 3.23 to 3.24
 - Remove `modx_runtime` Twig global. All its methods are available as Twig functions (`chunk()`, `snippet()`, `option()`, `link()`, etc.)
 
 ## 0.6.0-pl
