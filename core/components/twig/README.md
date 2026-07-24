@@ -42,11 +42,11 @@ Use this extra when:
 
 Do not use it when:
 
-- you want Twig to be the primary application templating system
-- you need native Twig template loaders, file trees, or heavy `{% extends %}` / `{% include %}` workflows across many files
 - you want to hide MODX completely and treat Twig as a separate frontend layer
 
-If your goal is "Twig-first, file-first, loader-first", a loader-based approach is a better fit than this addon.
+File-based templates are supported alongside inline Twig: register template
+directories (optionally namespaced) and use `{% include %}`, `{% embed %}`,
+and `{% extends %}` as in any Twig project. See "Template Directories" below.
 
 ## Setup
 
@@ -75,6 +75,44 @@ return '<div class="card">{{ product_name }}</div>';
 ```
 
 And that can still be processed through the addon parser.
+
+## Template Directories
+
+Two ways to make `.twig` files loadable:
+
+1. The `twig.template_paths` system setting — a JSON object mapping loader
+   namespaces to directories (relative paths resolve against `MODX_BASE_PATH`):
+
+   ```json
+   {"components": "core/components/mysite/templates/components", "main": "core/components/mysite/templates"}
+   ```
+
+2. Programmatically, e.g. from a plugin or your own bootstrap:
+
+   ```php
+   $twig = $modx->services->get('twigparser');
+   $twig->registerTemplatePath('/path/to/components', 'components');
+   ```
+
+Then, anywhere Twig renders:
+
+```twig
+{% include '@components/button/button.twig' with { label: 'Book now' } only %}
+```
+
+The `main` namespace serves bare paths like `{% extends 'layout.twig' %}`.
+
+## Error Handling
+
+When a render fails, the error is logged to the MODX error log. What the
+visitor sees depends on `twig.debug`:
+
+- debug on (default): the original source is returned unrendered, so you can
+  see what failed in place.
+- debug off (production): element renders (chunks, ContentBlocks templates)
+  return an empty string; the document-level pass returns the content with
+  Twig delimiters made inert (`&#123;`) so the page still renders but nothing
+  executes and no template logic leaks to visitors.
 
 ## Built-in Twig Helpers
 

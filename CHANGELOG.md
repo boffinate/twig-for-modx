@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Add file-based template loading: a namespaced `FilesystemLoader` is chained
+  with the string loader, fed from the new `twig.template_paths` system
+  setting (JSON object of namespace => directory) and the new
+  `registerTemplatePath()` method. `{% include %}` / `{% embed %}` /
+  `{% extends %}` with file paths now work everywhere Twig renders
+- Stop leaking template source to visitors on render errors. With
+  `twig.debug` off, element renders return an empty string and the
+  document-level pass returns the content with Twig delimiters made inert;
+  errors are logged with template name and line. Debug mode keeps the old
+  return-the-source behaviour
+
 ## 0.7.0-pl
 
 - Upgrade Twig from 3.23 to 3.24

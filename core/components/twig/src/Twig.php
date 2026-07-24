@@ -13,6 +13,10 @@ use MODX\Revolution\modResource;
 use MODX\Revolution\modX;
 use Twig\Environment;
 use Twig\Extension\ExtensionInterface;
+use Twig\Loader\ArrayLoader;
+use Twig\Loader\ChainLoader;
+use Twig\Loader\FilesystemLoader;
+use Twig\Loader\LoaderInterface;
 use xPDO\xPDO;
 
 class Twig extends ParserBase
@@ -29,8 +33,17 @@ class Twig extends ParserBase
     private const MAX_OUTPUT_SIZE = 5_242_880; // 5MB
     private ?ResourceAccessor $resourceAccessor = null;
     private ?modResource $lastResource = null;
+    /** @var array<string, string[]> namespace => template directories */
+    private array $templatePaths = [];
 
     public const GLOBAL_KEYS = ['modx', 'resource', 'placeholders'];
+
+    /** On render errors, return an empty string (production default). */
+    public const ERROR_FALLBACK_EMPTY = 'empty';
+    /** On render errors, return the source with Twig delimiters made inert. */
+    public const ERROR_FALLBACK_NEUTRALIZE = 'neutralize';
+    /** On render errors, return the source untouched (debug behaviour). */
+    public const ERROR_FALLBACK_SOURCE = 'source';
 
     public function __construct(modX &$modx)
     {
@@ -83,7 +96,10 @@ class Twig extends ParserBase
             && $this->modx->context->key !== 'mgr'
             && strlen($content) <= self::MAX_OUTPUT_SIZE
             && self::containsTwigSyntax($content)) {
-            $content = $this->renderString($content, []);
+            // Neutralize on error: blanking the assembled document would take
+            // the whole page down; making the delimiters inert keeps the page
+            // rendering without executing or re-parsing the broken Twig.
+            $content = $this->renderString($content, [], self::ERROR_FALLBACK_NEUTRALIZE);
         }
 
         return parent::processElementTags($parentTag, $content, $processUncacheable, $removeUnprocessed, $prefix,
@@ -107,8 +123,7 @@ class Twig extends ParserBase
         if (isset($this->twig)) return;
 
         $cachePath = $this->getCachePath();
-        $loader = new \Twig\Loader\ArrayLoader([
-        ]);
+        $loader = $this->buildLoader();
         $debug = (bool) $this->modx->getOption('twig.debug', null, true);
         $this->twig = new \Twig\Environment($loader, [
             'debug' => $debug,
@@ -127,7 +142,7 @@ class Twig extends ParserBase
         ]);
     }
 
-    public function renderString(string $content, array $placeholders)
+    public function renderString(string $content, array $placeholders, string $errorFallback = self::ERROR_FALLBACK_EMPTY)
     {
         if (!self::containsTwigSyntax($content)) {
             return $content;
@@ -154,11 +169,46 @@ class Twig extends ParserBase
 
             return $result;
         } catch (\Twig\Error\Error $e) {
-            $this->modx->log(xPDO::LOG_LEVEL_ERROR, '[Twig] ' . $e->getMessage());
-            return $content;
+            return $this->handleRenderError($e, $content, $errorFallback);
         } finally {
             $this->renderDepth--;
         }
+    }
+
+    /**
+     * Template source must never reach visitors on a failed render: it can
+     * contain logic, comments, and expressions that were written on the
+     * assumption they stay server-side. In debug mode the source is returned
+     * so developers see what failed in place.
+     */
+    private function handleRenderError(\Twig\Error\Error $e, string $content, string $errorFallback): string
+    {
+        $source = $e->getSourceContext();
+        $this->modx->log(xPDO::LOG_LEVEL_ERROR, sprintf(
+            '[Twig] Render error%s at line %d: %s',
+            $source && $source->getName() !== '' ? ' in ' . $source->getName() : '',
+            $e->getTemplateLine(),
+            $e->getRawMessage()
+        ));
+
+        if ((bool) $this->modx->getOption('twig.debug', null, true)) {
+            return $content;
+        }
+
+        return match ($errorFallback) {
+            self::ERROR_FALLBACK_SOURCE => $content,
+            self::ERROR_FALLBACK_NEUTRALIZE => self::neutralizeTwigSyntax($content),
+            default => '',
+        };
+    }
+
+    /**
+     * Make Twig delimiters inert so the surrounding markup still renders but
+     * nothing can execute (and the MODX parser pass cannot revive them).
+     */
+    public static function neutralizeTwigSyntax(string $content): string
+    {
+        return str_replace(['{{', '{%', '{#'], ['&#123;{', '&#123;%', '&#123;#'], $content);
     }
 
     public static function containsTwigSyntax(string $content): bool
@@ -180,6 +230,20 @@ class Twig extends ParserBase
         }
 
         return $this->runtime;
+    }
+
+    /**
+     * Register a directory of Twig template files, optionally under a
+     * namespace: registerTemplatePath('/path/to/components', 'components')
+     * makes `{% include '@components/button/button.twig' %}` work.
+     */
+    public function registerTemplatePath(string $path, string $namespace = FilesystemLoader::MAIN_NAMESPACE): void
+    {
+        $this->templatePaths[$namespace][] = $path;
+
+        if (isset($this->twig)) {
+            unset($this->twig);
+        }
     }
 
     public function registerInitializer(callable $initializer): void
@@ -246,6 +310,59 @@ class Twig extends ParserBase
     private function getCachePath(): string
     {
         return self::getCompiledTemplatesPath($this->modx);
+    }
+
+    /**
+     * Chain an ArrayLoader (createTemplate strings) with a FilesystemLoader
+     * fed from the `twig.template_paths` system setting and any paths
+     * registered through registerTemplatePath(). The setting is a JSON
+     * object of namespace => path; use "main" for the root namespace.
+     * Relative paths resolve against MODX_BASE_PATH.
+     */
+    private function buildLoader(): LoaderInterface
+    {
+        $filesystem = new FilesystemLoader();
+
+        foreach ($this->resolveTemplatePaths() as $namespace => $paths) {
+            foreach ($paths as $path) {
+                if (!is_dir($path)) {
+                    $this->modx->log(xPDO::LOG_LEVEL_WARN, '[Twig] Template path does not exist: ' . $path);
+                    continue;
+                }
+                $filesystem->addPath($path, $namespace);
+            }
+        }
+
+        return new ChainLoader([new ArrayLoader([]), $filesystem]);
+    }
+
+    /**
+     * @return array<string, string[]>
+     */
+    private function resolveTemplatePaths(): array
+    {
+        $paths = $this->templatePaths;
+
+        $setting = trim((string) $this->modx->getOption('twig.template_paths', null, ''));
+        if ($setting !== '') {
+            $decoded = json_decode($setting, true);
+            if (!is_array($decoded)) {
+                $this->modx->log(xPDO::LOG_LEVEL_ERROR, '[Twig] The twig.template_paths setting must be a JSON object of namespace => path.');
+                $decoded = [];
+            }
+            foreach ($decoded as $namespace => $path) {
+                $namespace = is_string($namespace) && $namespace !== '' ? $namespace : FilesystemLoader::MAIN_NAMESPACE;
+                foreach ((array) $path as $single) {
+                    $single = (string) $single;
+                    if (!str_starts_with($single, '/')) {
+                        $single = MODX_BASE_PATH . $single;
+                    }
+                    $paths[$namespace][] = $single;
+                }
+            }
+        }
+
+        return $paths;
     }
 
     private function syncGlobals(): void
