@@ -103,6 +103,21 @@ class TwigFilesystemLoaderTest extends ParserTestCase
         $this->assertSame('<div class="card">A card</div>', $output);
     }
 
+    public function test_template_paths_setting_main_key_serves_bare_paths(): void
+    {
+        $dir = $this->createTemplateDir([
+            'components/Chip.html.twig' => '<span class="chip">{{ text }}</span>',
+        ]);
+        $this->modx->setOption('twig.template_paths', json_encode(['main' => $dir]));
+
+        $output = $this->twigParser()->renderString(
+            "{% include 'components/Chip.html.twig' with { text: 'hi' } only %}",
+            []
+        );
+
+        $this->assertSame('<span class="chip">hi</span>', $output);
+    }
+
     public function test_missing_template_path_is_skipped_without_breaking_rendering(): void
     {
         $this->twigParser()->registerTemplatePath(sys_get_temp_dir() . '/twig-does-not-exist-' . bin2hex(random_bytes(4)));

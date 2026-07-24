@@ -362,7 +362,9 @@ class Twig extends ParserBase
                 $decoded = [];
             }
             foreach ($decoded as $namespace => $path) {
-                $namespace = is_string($namespace) && $namespace !== '' ? $namespace : FilesystemLoader::MAIN_NAMESPACE;
+                $namespace = is_string($namespace) && $namespace !== '' && $namespace !== 'main'
+                    ? $namespace
+                    : FilesystemLoader::MAIN_NAMESPACE;
                 foreach ((array) $path as $single) {
                     $single = (string) $single;
                     if (!str_starts_with($single, '/')) {
