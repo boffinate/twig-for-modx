@@ -52,19 +52,26 @@ final class UxComponentSupport
             $twig
         );
 
+        $stack = new ComponentStack();
         $renderer = new ComponentRenderer(
             $twig,
             $dispatcher,
             $factory,
             new ComponentProperties($propertyAccessor),
-            new ComponentStack()
+            $stack
         );
 
+        /*
+         * UX 3.x added ComponentStack as a third ComponentRuntime constructor
+         * argument; 2.x takes two. Supporting both keeps the extra usable on
+         * PHP 8.2/8.3 (UX 2.36) and PHP 8.4+ (UX 3.2+) alike.
+         */
+        $runtimeTakesStack = (new \ReflectionClass(ComponentRuntime::class))
+            ->getConstructor()->getNumberOfParameters() >= 3;
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
-            ComponentRuntime::class => static fn (): ComponentRuntime => new ComponentRuntime(
-                $renderer,
-                new ServiceLocator([])
-            ),
+            ComponentRuntime::class => static fn (): ComponentRuntime => $runtimeTakesStack
+                ? new ComponentRuntime($renderer, new ServiceLocator([]), $stack)
+                : new ComponentRuntime($renderer, new ServiceLocator([])),
         ]));
         $twig->addExtension(new ComponentExtension());
         $twig->setLexer(new ComponentLexer($twig));
