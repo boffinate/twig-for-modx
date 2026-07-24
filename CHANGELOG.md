@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Integrate Symfony UX TwigComponent (anonymous components), hand-wired so no
+  Symfony framework is required. `<twig:Button label="…" />` syntax,
+  `{% props %}` validation, the `attributes` bag, slots via component content,
+  and the `component()` function all work anywhere Twig renders — including
+  chunks and ContentBlocks templates. Component templates are `.html.twig`
+  files in a `components/` directory under any registered template path
+  (`twig.components_dir` overrides the directory name; `twig.components`
+  disables the integration). `containsTwigSyntax()` now also detects
+  `<twig:` so component-only content triggers the Twig pass
+
 - Add file-based template loading: a namespaced `FilesystemLoader` is chained
   with the string loader, fed from the new `twig.template_paths` system
   setting (JSON object of namespace => directory) and the new

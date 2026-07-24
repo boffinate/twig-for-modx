@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Boffinate\Twig;
 
+use Boffinate\Twig\Component\UxComponentSupport;
 use Boffinate\Twig\Extension\ModxDebugExtension;
 use Boffinate\Twig\Extension\ModxExtension;
 use Boffinate\Twig\Proxy\modChunkTwig;
@@ -134,6 +135,13 @@ class Twig extends ParserBase
             $this->twig->addExtension(new ModxDebugExtension($this->modx));
         }
         $this->twig->addExtension(new ModxExtension($this->getRuntime()));
+        if ((bool) $this->modx->getOption('twig.components', null, true)
+            && class_exists(\Symfony\UX\TwigComponent\Twig\ComponentExtension::class)) {
+            UxComponentSupport::register(
+                $this->twig,
+                (string) $this->modx->getOption('twig.components_dir', null, 'components')
+            );
+        }
         $this->applyInitializers();
         $this->modx->invokeEvent('OnTwigInit', [
             'twig' => $this->twig,
@@ -213,7 +221,10 @@ class Twig extends ParserBase
 
     public static function containsTwigSyntax(string $content): bool
     {
-        return str_contains($content, '{{') || str_contains($content, '{%') || str_contains($content, '{#');
+        return str_contains($content, '{{')
+            || str_contains($content, '{%')
+            || str_contains($content, '{#')
+            || str_contains($content, '<twig:');
     }
 
     public function getEnvironment(): Environment

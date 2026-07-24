@@ -102,6 +102,38 @@ Then, anywhere Twig renders:
 
 The `main` namespace serves bare paths like `{% extends 'layout.twig' %}`.
 
+## Components (Symfony UX TwigComponent)
+
+The addon wires Symfony UX TwigComponent's anonymous components onto the
+environment (no Symfony framework involved). Drop a template into a
+`components/` directory under any registered template path:
+
+```twig
+{# components/Button.html.twig #}
+{% props label, variant = 'primary' %}
+<a{{ attributes.defaults({class: 'a-btn a-btn--' ~ variant}) }}>{{ label }}</a>
+```
+
+and use it anywhere Twig renders — templates, chunks, ContentBlocks templates:
+
+```twig
+<twig:Button label="Book now" variant="secondary" data-tracking="cta" />
+<twig:Button :label="'Book ' ~ what" />
+{{ component('Button', { label: 'Go' }) }}
+```
+
+`{% props %}` enforces required props, `attributes` carries extra HTML
+attributes (with class merging via `attributes.defaults`), and component
+content becomes the `content` block for slot-style composition. Set
+`twig.components` to `0` to disable, or `twig.components_dir` to rename the
+`components/` directory prefix.
+
+Standalone environments get the same behaviour with:
+
+```php
+\Boffinate\Twig\Component\UxComponentSupport::register($twigEnvironment);
+```
+
 ## Error Handling
 
 When a render fails, the error is logged to the MODX error log. What the

@@ -1,0 +1,73 @@
+<?php
+declare(strict_types=1);
+
+namespace Boffinate\Twig\Component;
+
+use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\UX\TwigComponent\ComponentAttributes;
+use Symfony\UX\TwigComponent\ComponentFactory;
+use Symfony\UX\TwigComponent\ComponentProperties;
+use Symfony\UX\TwigComponent\ComponentRenderer;
+use Symfony\UX\TwigComponent\ComponentStack;
+use Symfony\UX\TwigComponent\ComponentTemplateFinder;
+use Symfony\UX\TwigComponent\Twig\ComponentExtension;
+use Symfony\UX\TwigComponent\Twig\ComponentLexer;
+use Symfony\UX\TwigComponent\Twig\ComponentRuntime;
+use Twig\Environment;
+use Twig\Runtime\EscaperRuntime;
+use Twig\RuntimeLoader\FactoryRuntimeLoader;
+
+/*
+ * Hand-wires Symfony UX TwigComponent onto a plain Twig Environment: the
+ * services TwigComponentBundle would register in a Symfony app, built by
+ * hand so no framework is required. Anonymous (template-only) components
+ * are supported; class-backed components would need a real service locator.
+ *
+ * Because it only needs an Environment, the same call works for the
+ * MODX-created environment and for standalone environments (e.g. pages
+ * rendered by our own PHP without MODX templating involved).
+ */
+final class UxComponentSupport
+{
+    /**
+     * @param string $directory directory prefix, relative to the loader
+     *                          roots, where anonymous component templates
+     *                          live: `<twig:Button>` resolves to
+     *                          `{directory}/Button.html.twig`
+     */
+    public static function register(Environment $twig, string $directory = 'components'): void
+    {
+        $propertyAccessor = PropertyAccess::createPropertyAccessor();
+        $dispatcher = new EventDispatcher();
+
+        $factory = new ComponentFactory(
+            new ComponentTemplateFinder($twig->getLoader(), $directory),
+            new ServiceLocator([]),
+            $propertyAccessor,
+            $dispatcher,
+            [],
+            [],
+            $twig
+        );
+
+        $renderer = new ComponentRenderer(
+            $twig,
+            $dispatcher,
+            $factory,
+            new ComponentProperties($propertyAccessor),
+            new ComponentStack()
+        );
+
+        $twig->addRuntimeLoader(new FactoryRuntimeLoader([
+            ComponentRuntime::class => static fn (): ComponentRuntime => new ComponentRuntime(
+                $renderer,
+                new ServiceLocator([])
+            ),
+        ]));
+        $twig->addExtension(new ComponentExtension());
+        $twig->setLexer(new ComponentLexer($twig));
+        $twig->getRuntime(EscaperRuntime::class)->addSafeClass(ComponentAttributes::class, ['html']);
+    }
+}
