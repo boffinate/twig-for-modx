@@ -376,6 +376,43 @@ Do not use it when:
 
 - plain ContentBlocks placeholders already solve the problem more simply
 
+## pdoTools Snippets (pdoMenu, pdoResources, ...)
+
+pdoTools-based snippets fetch their tpl chunks through pdoTools' own
+`getChunk()` machinery, which bypasses the MODX parser's `getElement()` —
+and with it the proxy that normally renders Twig in chunks. To close that
+gap, the addon ships Twig-aware subclasses of pdoTools' service classes.
+Point pdoTools at them via two system settings:
+
+| Setting | Value |
+|---------|-------|
+| `pdotools_pdotools_class` | `Boffinate\Twig\PdoTools\CoreToolsTwig` |
+| `pdotools_fetch_class` | `Boffinate\Twig\PdoTools\FetchTwig` |
+
+With these registered, Twig renders in tpl chunks (including `@INLINE`
+bindings and `&fastMode`) with the row placeholders pdoTools resolved for
+the chunk, so `{{ pagetitle }}` works in a pdoResources tpl. The classes
+are inert when the `twigparser` service is not registered, so plain
+pdoTools behaviour is unchanged if the addon is disabled.
+
+Note on `@INLINE` chunks: pdoTools historically converts `{{ ... }}` to
+`[[ ... ]]` inside inline chunk bodies. The subclasses render valid Twig in
+the inline body first; content that is not valid Twig (i.e. the legacy
+MODX-tag shorthand) is left for pdoTools to convert as before.
+
+### Disabling The Document Pass
+
+Without the subclasses above, the addon relies on a catch-all "document
+pass" that Twig-renders the whole uncacheable document so Twig in pdoTools
+tpl chunks still works. The downside is that editor-supplied content
+containing `{{ }}` gets compiled as Twig too.
+
+Once the pdoTools subclasses are registered, chunks are rendered at the
+element level, and the document pass can be switched off with the
+`twig.document_pass` system setting (default on). With it off, editor
+content is never compiled as Twig — only templates, chunks, snippet
+output, and pdoTools tpl chunks are.
+
 ## Practical Guidance
 
 Good default rules:

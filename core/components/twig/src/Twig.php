@@ -93,8 +93,16 @@ class Twig extends ParserBase
         // when the content is small enough to be a raw template or chunk.
         // Assembled page content (with ContentBlocks dump output etc.) is
         // much larger and would cause double-rendering or OOM.
+        /*
+         * The whole pass can be switched off with the `twig.document_pass`
+         * system setting: it exists as a catch-all for chunks that bypass
+         * getElement() (pdoTools tpl chunks), and sites using the pdoTools
+         * subclasses in Boffinate\Twig\PdoTools can disable it so editor
+         * content is never compiled as Twig.
+         */
         if (is_string($content) && $processUncacheable
             && $this->modx->context->key !== 'mgr'
+            && (bool) $this->modx->getOption('twig.document_pass', null, true)
             && strlen($content) <= self::MAX_OUTPUT_SIZE
             && self::containsTwigSyntax($content)) {
             // Neutralize on error: blanking the assembled document would take

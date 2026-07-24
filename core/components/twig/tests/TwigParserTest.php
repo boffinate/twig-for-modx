@@ -706,4 +706,24 @@ class TwigParserTest extends ParserTestCase
         $this->assertInstanceOf(\ModxPro\PdoTools\Parsing\Parser::class, $pdoParser);
         $this->assertNotSame($twigParser, $pdoParser);
     }
+
+    /*
+     * With `twig.document_pass` disabled, raw Twig in the assembled document
+     * must stay untouched (editor content is never compiled as Twig), while
+     * chunks resolved through getElement() still render Twig via the
+     * modChunkTwig proxy.
+     */
+    public function test_document_pass_can_be_disabled_while_chunks_still_render_twig(): void
+    {
+        $this->registerChunk('GatedTwigChunk', 'Chunk {{ 2 + 2 }}');
+        $this->modx->setOption('twig.document_pass', false);
+
+        try {
+            $output = $this->processContent('{{ 2 + 2 }} [[$GatedTwigChunk]]');
+        } finally {
+            $this->modx->setOption('twig.document_pass', true);
+        }
+
+        $this->assertSame('{{ 2 + 2 }} Chunk 4', $output);
+    }
 }

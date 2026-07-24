@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Add Twig-aware pdoTools subclasses (`Boffinate\Twig\PdoTools\CoreToolsTwig`
+  and `FetchTwig`, registered via the `pdotools_pdotools_class` and
+  `pdotools_fetch_class` system settings) so tpl chunks fetched by
+  pdoTools-based snippets (pdoMenu, pdoResources, ...) render Twig with the
+  chunk's resolved placeholders — including `@INLINE` bindings and fast
+  mode. These chunks bypass the MODX parser's `getElement()`, so the
+  modChunkTwig proxy never saw them before
+- Add `twig.document_pass` system setting (default on) to gate the
+  catch-all Twig pass over the uncacheable document. That pass only exists
+  because pdoTools tpl chunks bypassed element-level rendering; with the
+  new pdoTools subclasses registered it can be turned off so
+  editor-supplied `{{ }}` content is never compiled as Twig
+
 - Integrate Symfony UX TwigComponent (anonymous components), hand-wired so no
   Symfony framework is required. `<twig:Button label="…" />` syntax,
   `{% props %}` validation, the `attributes` bag, slots via component content,
