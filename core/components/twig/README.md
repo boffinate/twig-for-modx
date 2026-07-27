@@ -395,23 +395,100 @@ the chunk, so `{{ pagetitle }}` works in a pdoResources tpl. The classes
 are inert when the `twigparser` service is not registered, so plain
 pdoTools behaviour is unchanged if the addon is disabled.
 
+**These must be real system settings.** This addon's namespace bootstrap
+resolves the shared `pdotools` service while installing itself as the
+parser, so the class is chosen during `_initNamespaces()` — before
+`OnMODXInit`. If you apply system settings from a plugin on that event
+(ClientConfig and similar settings-file extras do exactly this), you get a
+half-configured state that is easy to miss: `pdofetch` is resolved lazily
+and picks up your value, `pdotools` was resolved early and does not.
+Database settings are read into `$modx->config` before any namespace
+bootstrap runs, so they always win. If you must drive these from a file,
+apply them from a namespace bootstrap that sorts before `pdotools` — and
+guard with `class_exists()`, because pdoTools does `new $class(...)`
+unguarded and an unloadable class is a fatal on every request.
+
 Note on `@INLINE` chunks: pdoTools historically converts `{{ ... }}` to
 `[[ ... ]]` inside inline chunk bodies. The subclasses render valid Twig in
 the inline body first; content that is not valid Twig (i.e. the legacy
 MODX-tag shorthand) is left for pdoTools to convert as before.
 
-### Disabling The Document Pass
+## What Twig Compiles (and what it must not)
 
-Without the subclasses above, the addon relies on a catch-all "document
-pass" that Twig-renders the whole uncacheable document so Twig in pdoTools
-tpl chunks still works. The downside is that editor-supplied content
-containing `{{ }}` gets compiled as Twig too.
+Twig runs before the MODX parser, so anything handed to it becomes template
+source with the `modx` object in scope. The rule this addon follows is
+therefore about **provenance**: Twig compiles *elements* — things an author
+with element access wrote — and the values those elements interpolate into
+themselves. It does not compile the document.
 
-Once the pdoTools subclasses are registered, chunks are rendered at the
-element level, and the document pass can be switched off with the
-`twig.document_pass` system setting (default on). With it off, editor
-content is never compiled as Twig — only templates, chunks, snippet
-output, and pdoTools tpl chunks are.
+| Source | Compiled? | Mechanism |
+|---|---|---|
+| Templates | yes | `modTemplateTwig` proxy on the Template relation |
+| Chunks (`[[$chunk]]`, `$modx->getChunk()`) | yes | `modChunkTwig` proxy via `getElement()` |
+| ContentBlocks field templates | yes | `ContentBlocks_BeforeParse` hook |
+| pdoTools tpl chunks, `@INLINE`, fast mode | yes | the subclasses above |
+| String templates, standalone environments | yes | `renderString()` / your own `Environment` |
+| Resource content, TV values | **no** | — |
+| Snippet output | **no** | put Twig in the tpl chunks a snippet renders |
+| The assembled document | **no** | unless you enable the document pass |
+
+`tests/SecurityBoundaryTest.php` is the executable version of this table.
+
+### Templates render before the resource is merged
+
+The Template proxy renders Twig in `getContent()` — after properties
+resolve, before `modTemplate::process()` runs the tag pass. That is the last
+moment the string is purely template source; one step later `[[*content]]`
+has merged the resource body into it. So template Twig is evaluated **before**
+MODX tags, the opposite of chunks, and deliberately so.
+
+Template Twig is part of the *cacheable* pass: it is evaluated when the
+resource cache is generated, not on every request. Emit `[[!snippet]]` tags
+from your Twig for anything that must vary per request — they pass through
+untouched and are processed later, exactly like MODX tags written by hand.
+This differs from pre-1.0 behaviour, where template Twig re-ran per request
+as a side effect of the document pass.
+
+### The chunk seam
+
+`modChunkTwig` renders a chunk's *output*, after its MODX tags are
+substituted. That ordering is the integration seam between the two
+templating systems — it is what makes `{{ '[[+date]]'|date('Y') }}` and
+feeding pdoTools or ContentBlocks placeholder output into Twig filters work.
+
+The consequence is that **a value interpolated into a chunk becomes part of
+that chunk's Twig source**. For editor-supplied values that is an accepted
+trade: the chunk's author chose what it pulls in. For **request-derived**
+values it is not safe and no setting makes it safe — do not route query
+strings, form input or other visitor data through a chunk that Twig then
+renders. Snippet output is never compiled, so that is the safe channel.
+
+## The Document Pass (`twig.document_pass`, default off)
+
+The document pass Twig-renders the whole assembled uncacheable document.
+It is **off by default**, and should stay off.
+
+It has no provenance at all. By the time it runs, template output, snippet
+output, editor content and anything echoed back from the request are one
+string. The last of those is the sharp end: a search page that prints "no
+results for X" will compile X, so with this pass on a query string like
+`?q={{ modx.config.site_name }}` is server-side template injection reaching
+the full MODX API — **unauthenticated**, no editor trust involved. It is
+also a footgun with no attacker at all: a literal `{{` in a code sample or
+pasted text breaks the page. A Twig sandbox is not a fix, because to disarm
+`{{ modx.runSnippet(…) }}` in a blog post it would also have to disarm the
+element-generated Twig the pass exists to serve.
+
+### When you still need it
+
+Turn it on with `twig.document_pass` = `1` only for chunk-fetching paths
+element-level rendering does not reach: Alpacka-based extras that
+`getObject(modChunk…)` with their own cache, extras that build inline chunk
+objects (Tagger), and snippets that emit Twig in their own output rather
+than in a tpl chunk.
+
+If you do, audit every place request data is echoed into a page first.
+Prefer moving the Twig into a chunk instead.
 
 ## Practical Guidance
 

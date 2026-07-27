@@ -89,20 +89,32 @@ class Twig extends ParserBase
         $tokens = array(),
         $depth = 0
     ) {
-        // Render Twig on uncacheable content outside the manager, but only
-        // when the content is small enough to be a raw template or chunk.
-        // Assembled page content (with ContentBlocks dump output etc.) is
-        // much larger and would cause double-rendering or OOM.
         /*
-         * The whole pass can be switched off with the `twig.document_pass`
-         * system setting: it exists as a catch-all for chunks that bypass
-         * getElement() (pdoTools tpl chunks), and sites using the pdoTools
-         * subclasses in Boffinate\Twig\PdoTools can disable it so editor
-         * content is never compiled as Twig.
+         * The document pass: Twig-render the whole assembled uncacheable
+         * document. It is OFF by default (`twig.document_pass`), because it
+         * cannot tell where the Twig it compiles came from. By the time this
+         * runs, template output, snippet output, editor content and anything
+         * echoed back from the request are one string. That last one is the
+         * sharp end: a page printing "no results for X" compiles X, so with
+         * this pass on a query string is template injection reaching the modx
+         * object, with no editor trust involved. A sandbox does not help — it
+         * would have to disarm the element-generated Twig this pass exists to
+         * serve.
+         *
+         * Element-level rendering covers the same ground with provenance
+         * intact — templates via the modTemplateTwig proxy, chunks via
+         * modChunkTwig, ContentBlocks templates via ContentBlocks_BeforeParse,
+         * and pdoTools tpl chunks via the subclasses in
+         * Boffinate\Twig\PdoTools. Turn this back on only for chunk-fetching
+         * paths none of those reach; see the README.
+         *
+         * The size guard skips content too large to be a raw template or
+         * chunk: assembled page content (ContentBlocks dump output etc.)
+         * would cause double-rendering or OOM.
          */
         if (is_string($content) && $processUncacheable
             && $this->modx->context->key !== 'mgr'
-            && (bool) $this->modx->getOption('twig.document_pass', null, true)
+            && (bool) $this->modx->getOption('twig.document_pass', null, false)
             && strlen($content) <= self::MAX_OUTPUT_SIZE
             && self::containsTwigSyntax($content)) {
             // Neutralize on error: blanking the assembled document would take

@@ -5,8 +5,10 @@ namespace MODX\Revolution\Tests\Twig;
 
 require_once __DIR__ . '/ParserTestCase.php';
 
+use Boffinate\Twig\Proxy\modTemplateTwig;
 use Boffinate\Twig\Twig;
 use Boffinate\Twig\Support\ModxRuntime;
+use MODX\Revolution\modResource;
 use Twig\Error\SyntaxError;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
@@ -33,11 +35,16 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame('Template 4 MODX', $this->renderTemplateContent('Template {{ 2 + 2 }} [[+name]]'));
     }
 
-    public function test_resource_content_renders_twig_and_modx_tags(): void
+    /*
+     * Resource content is the other side of a trust boundary from elements:
+     * an editor who can write a page cannot normally touch elements or PHP.
+     * MODX tags in content still work — Twig does not compile there.
+     */
+    public function test_resource_content_renders_modx_tags_but_not_twig(): void
     {
         $output = $this->renderResourceContent('Resource {{ 3 * 3 }} [[+name]]', ['name' => 'MODX']);
 
-        $this->assertSame('Resource 9 MODX', $output);
+        $this->assertSame('Resource {{ 3 * 3 }} MODX', $output);
     }
 
     public function test_modx_template_with_valid_twig_is_rendered(): void
@@ -716,14 +723,78 @@ class TwigParserTest extends ParserTestCase
     public function test_document_pass_can_be_disabled_while_chunks_still_render_twig(): void
     {
         $this->registerChunk('GatedTwigChunk', 'Chunk {{ 2 + 2 }}');
-        $this->modx->setOption('twig.document_pass', false);
 
-        try {
-            $output = $this->processContent('{{ 2 + 2 }} [[$GatedTwigChunk]]');
-        } finally {
-            $this->modx->setOption('twig.document_pass', true);
-        }
+        $output = $this->processContentWithoutDocumentPass('{{ 2 + 2 }} [[$GatedTwigChunk]]');
 
         $this->assertSame('{{ 2 + 2 }} Chunk 4', $output);
+    }
+
+    /*
+     * The shipped default, with nothing configured: content is not a
+     * template. An installation that never touches `twig.document_pass` must
+     * not compile whatever an editor typed into a resource — everything Twig
+     * renders is an element someone with element access authored.
+     */
+    public function test_document_pass_is_off_by_default(): void
+    {
+        $this->registerChunk('DefaultGateChunk', 'Chunk {{ 2 + 2 }}');
+        unset($this->modx->config['twig.document_pass']);
+
+        $output = $this->processContentWithConfiguredDocumentPass('{{ 2 + 2 }} [[$DefaultGateChunk]]');
+
+        $this->assertSame('{{ 2 + 2 }} Chunk 4', $output);
+    }
+
+    /*
+     * The escape hatch still works, for sites with chunk-fetching paths that
+     * element-level rendering does not reach.
+     */
+    public function test_document_pass_compiles_document_content_when_enabled(): void
+    {
+        $output = $this->processContent('{{ 2 + 2 }}');
+
+        $this->assertSame('4', $output);
+    }
+
+    /*
+     * Templates render Twig at element level, with no document pass — the
+     * modTemplateTwig proxy on modResource's Template relation.
+     */
+    public function test_template_renders_twig_without_the_document_pass(): void
+    {
+        $this->modx->setPlaceholder('name', 'MODX');
+        unset($this->modx->config['twig.document_pass']);
+
+        $output = $this->renderTemplateContent('Template {{ 2 + 2 }} [[+name]]');
+
+        $this->assertSame('Template 4 MODX', $output);
+    }
+
+    /*
+     * ...and that is the proxy doing it, not the document pass leaking back
+     * in: an unproxied core modTemplate leaves the Twig alone.
+     */
+    public function test_core_template_class_does_not_render_twig(): void
+    {
+        $this->modx->setPlaceholder('name', 'MODX');
+        unset($this->modx->config['twig.document_pass']);
+
+        $output = $this->renderPlainTemplateContent('Template {{ 2 + 2 }} [[+name]]');
+
+        $this->assertSame('Template {{ 2 + 2 }} MODX', $output);
+    }
+
+    /*
+     * The relation itself: a real resource fetched from the database must
+     * resolve its Template through the proxy, or none of the above reaches
+     * a live request.
+     */
+    public function test_resource_template_relation_resolves_to_the_twig_proxy(): void
+    {
+        $template = $this->registerTemplate('<h1>{{ 2 + 2 }}</h1>');
+        $resource = $this->registerResource(['template' => (int) $template->get('id')]);
+        $fetched = $this->modx->getObject(modResource::class, (int) $resource->get('id'));
+
+        $this->assertInstanceOf(modTemplateTwig::class, $fetched->getOne('Template'));
     }
 }

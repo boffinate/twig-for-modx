@@ -63,11 +63,11 @@ class TwigParserWithoutPdoToolsTest extends ParserTestCase
         $this->assertSame('Template 4 MODX', $this->renderTemplateContent('Template {{ 2 + 2 }} [[+name]]'));
     }
 
-    public function test_resource_content_renders_without_pdotools(): void
+    public function test_resource_content_keeps_twig_uncompiled_without_pdotools(): void
     {
         $output = $this->renderResourceContent('Resource {{ 3 * 3 }} [[+name]]', ['name' => 'MODX']);
 
-        $this->assertSame('Resource 9 MODX', $output);
+        $this->assertSame('Resource {{ 3 * 3 }} MODX', $output);
     }
 
     public function test_chunk_with_twig_content_renders_without_pdotools(): void

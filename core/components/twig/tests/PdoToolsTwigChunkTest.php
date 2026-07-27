@@ -93,6 +93,42 @@ class PdoToolsTwigChunkTest extends ParserTestCase
         );
     }
 
+    /*
+     * pdoTools' own long-standing convention is that `{{ ... }}` inside an
+     * @INLINE body is MODX-tag shorthand — `{{~{{+id}}}}` is a link tag, not
+     * a Twig expression — and _loadElement() rewrites those braces to `[[`
+     * before parsing. Sites have tpl chunks written that way, so a body that
+     * is not valid Twig has to come back untouched for pdoTools to convert
+     * as before. This is the compatibility promise that makes the subclasses
+     * safe to switch on, and with the document pass off by default they are
+     * the only thing rendering these chunks.
+     */
+    public function test_inline_chunk_keeps_legacy_modx_tag_shorthand(): void
+    {
+        $pdoTools = new CoreToolsTwig($this->modx);
+
+        $output = (string) $pdoTools->getChunk(
+            '@INLINE <a href="{{~{{+id}}}}">{{+label}}</a>',
+            ['id' => 1, 'label' => 'Home']
+        );
+
+        $this->assertStringNotContainsString('{{', $output, 'shorthand must be converted, not left raw');
+        $this->assertStringContainsString('>Home<', $output);
+    }
+
+    /*
+     * Invalid Twig in an inline body must not be swallowed: the source is
+     * kept so pdoTools still gets its chance at it.
+     */
+    public function test_inline_chunk_with_invalid_twig_falls_back_to_source(): void
+    {
+        $pdoTools = new CoreToolsTwig($this->modx);
+
+        $output = (string) $pdoTools->getChunk('@INLINE {{ label| }}', ['label' => 'Home']);
+
+        $this->assertStringNotContainsString('Home', $output);
+    }
+
     public function test_parse_chunk_renders_twig(): void
     {
         $this->createDbChunk('TwigPdoParseChunk', 'Hello {{ name }}');

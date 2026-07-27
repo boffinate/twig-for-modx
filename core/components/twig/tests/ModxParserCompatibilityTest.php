@@ -25,11 +25,11 @@ class ModxParserCompatibilityTest extends ParserTestCase
         );
     }
 
-    public function test_twig_expressions_render_in_resource_content(): void
+    public function test_modx_tags_render_in_resource_content_where_twig_does_not(): void
     {
         $output = $this->renderResourceContent('Resource {{ 3 * 3 }} [[+name]]', ['name' => 'MODX']);
 
-        $this->assertSame('Resource 9 MODX', $output);
+        $this->assertSame('Resource {{ 3 * 3 }} MODX', $output);
     }
 
     public function test_twig_expressions_evaluate(): void

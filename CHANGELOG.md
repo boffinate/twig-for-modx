@@ -9,11 +9,48 @@
   chunk's resolved placeholders — including `@INLINE` bindings and fast
   mode. These chunks bypass the MODX parser's `getElement()`, so the
   modChunkTwig proxy never saw them before
-- Add `twig.document_pass` system setting (default on) to gate the
-  catch-all Twig pass over the uncacheable document. That pass only exists
-  because pdoTools tpl chunks bypassed element-level rendering; with the
-  new pdoTools subclasses registered it can be turned off so
-  editor-supplied `{{ }}` content is never compiled as Twig
+- **BREAKING: Twig no longer compiles the assembled document by default.**
+  The catch-all pass over the uncacheable document is now gated behind a new
+  `twig.document_pass` system setting, **off by default**. That pass has no
+  provenance: template output, snippet output, editor content and anything
+  echoed back from the request are one string by the time it runs. The last
+  of those is the sharp end — a search page printing "no results for X"
+  compiles X, making `?q={{ modx.config.site_name }}` unauthenticated
+  server-side template injection with the full MODX API in scope. It also
+  broke pages on an innocent literal `{{` in a code sample. A sandbox cannot
+  fix it: stopping `{{ modx.runSnippet(…) }}` in a blog post would also
+  disarm the element-generated Twig the pass exists to serve. Element-level
+  rendering now covers that ground — templates, chunks, ContentBlocks field
+  templates and pdoTools tpl chunks each render Twig where the element is
+  resolved
+
+- **Twig now renders in template content at element level**, via a
+  `modTemplateTwig` proxy that bootstrap.php installs on modResource's
+  `Template` relation. Templates are the one element type the parser cannot
+  reach — `modResource::process()` resolves them through an xPDO relation,
+  never `getElement()` — so this decorates the relation instead. Rendering
+  happens in `getContent()`, before `modTemplate::process()` runs the tag
+  pass, which means template Twig is evaluated while the string is still
+  template source rather than after `[[*content]]` has merged the resource
+  body in.
+
+  Two behaviour notes: template Twig now evaluates **Twig first, MODX tags
+  second** (the reverse of chunks, which render after their tags are
+  substituted); and it is part of the *cacheable* pass, so it is evaluated
+  at cache generation rather than per request as it was when the document
+  pass drove it. Emit `[[!snippet]]` tags from Twig for per-request data
+
+- Add `tests/SecurityBoundaryTest.php`: executable coverage of what may and
+  may not be compiled — query-string input echoed into a page, editor
+  content merged through `[[*content]]`, TV values, snippet output — each
+  paired with the case showing what the boundary moving would look like
+
+  **Upgrading from 0.7.0:** register the two pdoTools class settings if you
+  use pdoMenu/pdoResources tpls with Twig in them. Templates keep working
+  with no action. Set `twig.document_pass` = `1` to restore the old
+  behaviour — you need it only for chunks fetched by extras the subclasses
+  do not cover (Alpacka-based extras, Tagger) or Twig emitted directly in
+  snippet output; audit anywhere request data is echoed into a page first
 
 - Integrate Symfony UX TwigComponent (anonymous components), hand-wired so no
   Symfony framework is required. `<twig:Button label="…" />` syntax,

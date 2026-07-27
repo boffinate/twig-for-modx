@@ -10,6 +10,7 @@ use MODX\Revolution\modPlugin;
 use MODX\Revolution\modPluginEvent;
 use MODX\Revolution\modResource;
 use MODX\Revolution\modSnippet;
+use Boffinate\Twig\Proxy\modTemplateTwig;
 use MODX\Revolution\modTemplate;
 use MODX\Revolution\modTemplateVar;
 use MODX\Revolution\Processors\Element\Plugin\Create as PluginCreate;
@@ -24,6 +25,8 @@ abstract class ParserTestCase extends MODxTestCase
     private array $registeredTemplateVars = [];
     /** @var int[] */
     private array $registeredResourceIds = [];
+    /** @var int[] */
+    private array $registeredTemplateIds = [];
     private ?modResource $originalResource = null;
 
     /**
@@ -54,6 +57,7 @@ abstract class ParserTestCase extends MODxTestCase
         $this->cleanupSnippets();
         $this->cleanupPlugins();
         $this->cleanupResources();
+        $this->cleanupTemplates();
         $this->cleanupTemplateVars();
         $this->resetRuntimeState();
         $this->modx->resource = $this->originalResource;
@@ -148,7 +152,30 @@ abstract class ParserTestCase extends MODxTestCase
         $this->registeredSnippets[] = $name;
     }
 
+    /*
+     * Runs the parser over a raw string the way MODX processes the assembled
+     * uncacheable document.
+     *
+     * The document pass is off by default, so it is enabled explicitly here:
+     * tests reaching for this helper are exercising document-level Twig, and
+     * stating that in one place beats every caller silently depending on a
+     * default. Tests for the gate itself use the two helpers below.
+     */
     protected function processContent(string $content, int $depth = 10): string
+    {
+        return $this->processContentWithDocumentPass($content, true, $depth);
+    }
+
+    protected function processContentWithoutDocumentPass(string $content, int $depth = 10): string
+    {
+        return $this->processContentWithDocumentPass($content, false, $depth);
+    }
+
+    /**
+     * Process content with whatever `twig.document_pass` is configured — used
+     * to cover the shipped default rather than an explicit setting.
+     */
+    protected function processContentWithConfiguredDocumentPass(string $content, int $depth = 10): string
     {
         $this->modx->elementCache = [];
         $this->modx->parser->processElementTags('', $content, true, true, '[[', ']]', [], $depth);
@@ -156,9 +183,29 @@ abstract class ParserTestCase extends MODxTestCase
         return $content;
     }
 
+    private function processContentWithDocumentPass(string $content, bool $documentPass, int $depth): string
+    {
+        $previous = $this->modx->getOption('twig.document_pass', null, null);
+        $this->modx->setOption('twig.document_pass', $documentPass);
+
+        try {
+            return $this->processContentWithConfiguredDocumentPass($content, $depth);
+        } finally {
+            $this->modx->setOption('twig.document_pass', $previous);
+        }
+    }
+
+    /*
+     * Renders a template the way MODX does: the element's own pass, then the
+     * document pass over the result.
+     *
+     * Instantiates the Twig proxy directly, which is what bootstrap.php
+     * makes modResource's Template relation resolve to. Tests that need to
+     * prove the relation itself is wired use renderResourceWithTemplate().
+     */
     protected function renderTemplateContent(string $content, array $properties = []): string
     {
-        $template = $this->modx->newObject(modTemplate::class);
+        $template = $this->modx->newObject(modTemplateTwig::class);
         $template->fromArray([
             'id' => 1,
             'templatename' => 'TwigTestTemplate',
@@ -171,6 +218,67 @@ abstract class ParserTestCase extends MODxTestCase
         $this->modx->parser->processElementTags('', $output, true, true, '[[', ']]', [], 10);
 
         return $output;
+    }
+
+    /**
+     * Renders content through an unproxied core modTemplate, for asserting
+     * what MODX does without this addon's Template decoration.
+     */
+    protected function renderPlainTemplateContent(string $content, array $properties = []): string
+    {
+        $template = $this->modx->newObject(modTemplate::class);
+        $template->fromArray([
+            'id' => 1,
+            'templatename' => 'TwigTestPlainTemplate',
+            'content' => $content,
+            'properties' => [],
+            'static' => false,
+        ], '', true, true);
+
+        $output = $template->process($properties);
+        $this->modx->parser->processElementTags('', $output, true, true, '[[', ']]', [], 10);
+
+        return $output;
+    }
+
+    protected function registerTemplate(string $content, array $fields = []): modTemplate
+    {
+        $template = $this->modx->newObject(modTemplate::class);
+        $template->fromArray(array_merge([
+            'templatename' => 'TwigTestTemplate' . bin2hex(random_bytes(4)),
+            'content' => $content,
+        ], $fields), '', true, true);
+
+        $this->assertTrue((bool) $template->save(), 'Could not create Template fixture.');
+        $this->registeredTemplateIds[] = (int) $template->get('id');
+
+        return $template;
+    }
+
+    /**
+     * Renders a real resource through a real template, via the xPDO relation
+     * — the full path a web request takes, including the Template proxy.
+     */
+    protected function renderResourceWithTemplate(string $templateContent, string $resourceContent): string
+    {
+        $template = $this->registerTemplate($templateContent);
+        $resource = $this->registerResource([
+            'template' => (int) $template->get('id'),
+            'content' => $resourceContent,
+        ]);
+
+        /* Re-fetch so the relation resolves fresh rather than from _relatedObjects. */
+        $fetched = $this->modx->getObject(modResource::class, (int) $resource->get('id'));
+        $previousResource = $this->modx->resource;
+        $this->modx->resource = $fetched;
+
+        try {
+            $fetched->prepare();
+
+            return (string) $fetched->_output;
+        } finally {
+            $this->modx->resource = $previousResource;
+        }
     }
 
     protected function renderResourceContent(string $content, array $properties = []): string
@@ -344,6 +452,20 @@ abstract class ParserTestCase extends MODxTestCase
         }
 
         $this->registeredResourceIds = [];
+    }
+
+    private function cleanupTemplates(): void
+    {
+        if (empty($this->registeredTemplateIds)) {
+            return;
+        }
+
+        $templates = $this->modx->getCollection(modTemplate::class, ['id:IN' => $this->registeredTemplateIds]);
+        foreach ($templates as $template) {
+            $template->remove();
+        }
+
+        $this->registeredTemplateIds = [];
     }
 
     private function cleanupTemplateVars(): void
