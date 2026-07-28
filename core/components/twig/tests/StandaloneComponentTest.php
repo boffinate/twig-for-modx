@@ -71,4 +71,47 @@ class StandaloneComponentTest extends TestCase
         $this->assertStringNotContainsString('<script>', $output);
         $this->assertStringContainsString('&lt;script&gt;', $output);
     }
+
+    /*
+     * Hooks (e.g. MODX OnTwigInit handlers) only ever see the Environment,
+     * so the dispatcher register() wired in must be retrievable from it —
+     * that is what makes post-registration PreMount listeners possible.
+     */
+    public function test_listeners_added_via_dispatcher_for_receive_pre_mount(): void
+    {
+        $twig = $this->createEnvironment();
+        $seen = [];
+
+        $dispatcher = UxComponentSupport::dispatcherFor($twig);
+        $this->assertNotNull($dispatcher);
+        $dispatcher->addListener(
+            \Symfony\UX\TwigComponent\Event\PreMountEvent::class,
+            function (\Symfony\UX\TwigComponent\Event\PreMountEvent $event) use (&$seen): void {
+                $seen[] = [$event->getMetadata()?->getName(), $event->getData()];
+            }
+        );
+
+        $twig->render('page.html.twig', ['cta' => 'Visit us']);
+
+        $this->assertSame('Button', $seen[0][0]);
+        $this->assertSame(['label' => 'Visit us', 'variant' => 'secondary'], $seen[0][1]);
+    }
+
+    public function test_register_accepts_a_caller_supplied_dispatcher(): void
+    {
+        $twig = new Environment(new FilesystemLoader([$this->templateDir]), [
+            'autoescape' => 'html',
+        ]);
+        $dispatcher = new \Symfony\Component\EventDispatcher\EventDispatcher();
+        UxComponentSupport::register($twig, 'components', $dispatcher);
+
+        $this->assertSame($dispatcher, UxComponentSupport::dispatcherFor($twig));
+    }
+
+    public function test_dispatcher_for_is_null_on_an_unregistered_environment(): void
+    {
+        $bare = new Environment(new FilesystemLoader([$this->templateDir]));
+
+        $this->assertNull(UxComponentSupport::dispatcherFor($bare));
+    }
 }

@@ -5,6 +5,7 @@ namespace Boffinate\Twig\Component;
 
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\UX\TwigComponent\ComponentAttributes;
 use Symfony\UX\TwigComponent\ComponentFactory;
@@ -32,15 +33,33 @@ use Twig\RuntimeLoader\FactoryRuntimeLoader;
 final class UxComponentSupport
 {
     /**
+     * The dispatcher wired into each environment's component factory and
+     * renderer, retrievable afterwards via dispatcherFor() so listeners
+     * (PreMount, PostMount, PreRender, ...) can be attached by code that
+     * only ever sees the Environment — e.g. an OnTwigInit hook.
+     *
+     * @var \WeakMap<Environment, EventDispatcherInterface>|null
+     */
+    private static ?\WeakMap $dispatchers = null;
+
+    /**
      * @param string $directory directory prefix, relative to the loader
      *                          roots, where anonymous component templates
      *                          live: `<twig:Button>` resolves to
      *                          `{directory}/Button.html.twig`
+     * @param EventDispatcherInterface|null $dispatcher a dispatcher with
+     *                          listeners already attached; created fresh
+     *                          when omitted
      */
-    public static function register(Environment $twig, string $directory = 'components'): void
-    {
+    public static function register(
+        Environment $twig,
+        string $directory = 'components',
+        ?EventDispatcherInterface $dispatcher = null
+    ): void {
         $propertyAccessor = PropertyAccess::createPropertyAccessor();
-        $dispatcher = new EventDispatcher();
+        $dispatcher ??= new EventDispatcher();
+        self::$dispatchers ??= new \WeakMap();
+        self::$dispatchers[$twig] = $dispatcher;
 
         $factory = new ComponentFactory(
             new ComponentTemplateFinder($twig->getLoader(), $directory),
@@ -76,5 +95,16 @@ final class UxComponentSupport
         $twig->addExtension(new ComponentExtension());
         $twig->setLexer(new ComponentLexer($twig));
         $twig->getRuntime(EscaperRuntime::class)->addSafeClass(ComponentAttributes::class, ['html']);
+    }
+
+    /*
+     * The dispatcher register() wired into this environment, or null when
+     * register() was never called on it.
+     */
+    public static function dispatcherFor(Environment $twig): ?EventDispatcherInterface
+    {
+        return (self::$dispatchers !== null && isset(self::$dispatchers[$twig]))
+            ? self::$dispatchers[$twig]
+            : null;
     }
 }
