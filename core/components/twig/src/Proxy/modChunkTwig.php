@@ -13,12 +13,24 @@ use ReflectionClass;
  */
 class modChunkTwig extends modChunk
 {
-    private ReflectionClass $reflection;
+    /**
+     * Which constant names each wrapped class declares. A proxy is built for
+     * every chunk tag occurrence, so the reflection is done once per class
+     * rather than once per chunk.
+     *
+     * @var array<class-string, array<string, true>>
+     */
+    private static array $constantNames = [];
 
     public function __construct(private modChunk $wrappedClass, private Twig $twig)
     {
         parent::__construct($twig->modx);
-        $this->reflection = new ReflectionClass($this->wrappedClass);
+
+        $class = $this->wrappedClass::class;
+        self::$constantNames[$class] ??= array_fill_keys(
+            array_keys((new ReflectionClass($class))->getConstants()),
+            true
+        );
     }
 
     public function process($properties = null, $content = null)
@@ -64,6 +76,6 @@ class modChunkTwig extends modChunk
 
     private function isConstant(string $name): bool
     {
-        return $this->reflection->hasConstant($name);
+        return isset(self::$constantNames[$this->wrappedClass::class][$name]);
     }
 }

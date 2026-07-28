@@ -15,8 +15,13 @@ use MODX\Revolution\modTemplate;
 use MODX\Revolution\modTemplateVar;
 use MODX\Revolution\Processors\Element\Plugin\Create as PluginCreate;
 use MODX\Revolution\Processors\Element\Snippet\Create;
+
+require_once __DIR__ . '/WritesTemplateFiles.php';
+
 abstract class ParserTestCase extends MODxTestCase
 {
+    use WritesTemplateFiles;
+
     /** @var string[] */
     private array $registeredSnippets = [];
     /** @var string[] */
@@ -91,6 +96,18 @@ abstract class ParserTestCase extends MODxTestCase
             $modx = $this->modx;
             require_once MODX_CORE_PATH . 'components/twig/bootstrap.php';
         }
+    }
+
+    /**
+     * The installed parser, asserted to be ours — the entry point for tests
+     * that drive Twig directly rather than through processContent().
+     */
+    protected function twigParser(): Twig
+    {
+        $parser = $this->modx->parser;
+        $this->assertInstanceOf(Twig::class, $parser);
+
+        return $parser;
     }
 
     protected function useTwigParser(): void
@@ -205,19 +222,7 @@ abstract class ParserTestCase extends MODxTestCase
      */
     protected function renderTemplateContent(string $content, array $properties = []): string
     {
-        $template = $this->modx->newObject(modTemplateTwig::class);
-        $template->fromArray([
-            'id' => 1,
-            'templatename' => 'TwigTestTemplate',
-            'content' => $content,
-            'properties' => [],
-            'static' => false,
-        ], '', true, true);
-
-        $output = $template->process($properties);
-        $this->modx->parser->processElementTags('', $output, true, true, '[[', ']]', [], 10);
-
-        return $output;
+        return $this->renderThroughTemplateClass(modTemplateTwig::class, 'TwigTestTemplate', $content, $properties);
     }
 
     /**
@@ -226,10 +231,22 @@ abstract class ParserTestCase extends MODxTestCase
      */
     protected function renderPlainTemplateContent(string $content, array $properties = []): string
     {
-        $template = $this->modx->newObject(modTemplate::class);
+        return $this->renderThroughTemplateClass(modTemplate::class, 'TwigTestPlainTemplate', $content, $properties);
+    }
+
+    /**
+     * @param class-string<modTemplate> $class
+     */
+    private function renderThroughTemplateClass(
+        string $class,
+        string $name,
+        string $content,
+        array $properties
+    ): string {
+        $template = $this->modx->newObject($class);
         $template->fromArray([
             'id' => 1,
-            'templatename' => 'TwigTestPlainTemplate',
+            'templatename' => $name,
             'content' => $content,
             'properties' => [],
             'static' => false,

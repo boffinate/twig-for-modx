@@ -395,10 +395,17 @@ the chunk, so `{{ pagetitle }}` works in a pdoResources tpl. The classes
 are inert when the `twigparser` service is not registered, so plain
 pdoTools behaviour is unchanged if the addon is disabled.
 
-**These must be real system settings.** This addon's namespace bootstrap
-resolves the shared `pdotools` service while installing itself as the
-parser, so the class is chosen during `_initNamespaces()` — before
-`OnMODXInit`. If you apply system settings from a plugin on that event
+The bootstrap sets both options itself (guarded by `class_exists()`) right
+before it resolves the `twigparser` service, so the shared `pdotools`
+service gets the Twig-aware class even on a site that has not configured
+anything.
+
+**Keep them as real system settings anyway.** This addon's namespace
+bootstrap resolves the shared `pdotools` service while installing itself as
+the parser, so the class is chosen during `_initNamespaces()` — before
+`OnMODXInit`, and before `_initContext()` rebuilds `$modx->config` and drops
+anything the bootstrap set. Services resolved after that point — `pdofetch`
+is the usual one — read the stored setting, not the bootstrap's value. If you apply system settings from a plugin on that event
 (ClientConfig and similar settings-file extras do exactly this), you get a
 half-configured state that is easy to miss: `pdofetch` is resolved lazily
 and picks up your value, `pdotools` was resolved early and does not.

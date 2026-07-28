@@ -12,6 +12,18 @@ return [
                 'priority' => 0,
                 'propertyset' => 0,
             ],
+            /*
+             * OnSiteRefresh only fires from the ClearCache processor;
+             * modCacheManager::refresh() — what deploy scripts and other code
+             * call directly — fires OnCacheUpdate instead. Compiled Twig
+             * templates are not auto-reloaded outside debug mode, so both
+             * events have to clear them.
+             */
+            [
+                'event' => 'OnCacheUpdate',
+                'priority' => 0,
+                'propertyset' => 0,
+            ],
         ],
     ],
     [

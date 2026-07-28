@@ -9,48 +9,19 @@ use Boffinate\Twig\Twig;
 
 class TwigUxComponentTest extends ParserTestCase
 {
-    private ?string $templateDir = null;
-
     protected function usesTwigParser(): bool
     {
         return true;
     }
 
-    /**
-     * @after
-     */
-    public function removeTemplateDir(): void
-    {
-        if ($this->templateDir !== null && is_dir($this->templateDir)) {
-            $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($this->templateDir, \FilesystemIterator::SKIP_DOTS),
-                \RecursiveIteratorIterator::CHILD_FIRST
-            );
-            foreach ($iterator as $item) {
-                $item->isDir() ? rmdir($item->getPathname()) : unlink($item->getPathname());
-            }
-            rmdir($this->templateDir);
-            $this->templateDir = null;
-        }
-    }
-
     private function registerComponents(array $templates): void
     {
-        $dir = sys_get_temp_dir() . '/twig-ux-' . bin2hex(random_bytes(4));
-        mkdir($dir . '/components', 0777, true);
+        $files = [];
         foreach ($templates as $name => $content) {
-            file_put_contents($dir . '/components/' . $name . '.html.twig', $content);
+            $files['components/' . $name . '.html.twig'] = $content;
         }
-        $this->templateDir = $dir;
-        $this->twigParser()->registerTemplatePath($dir);
-    }
 
-    private function twigParser(): Twig
-    {
-        $parser = $this->modx->parser;
-        $this->assertInstanceOf(Twig::class, $parser);
-
-        return $parser;
+        $this->twigParser()->registerTemplatePath($this->writeTemplateFiles($files, 'twig-ux-'));
     }
 
     private const BUTTON_TEMPLATE = <<<'TWIG'

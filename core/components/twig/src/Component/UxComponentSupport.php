@@ -42,6 +42,9 @@ final class UxComponentSupport
      */
     private static ?\WeakMap $dispatchers = null;
 
+    /** Whether ComponentRuntime's constructor takes a ComponentStack — a fact about the installed UX version, resolved once. */
+    private static ?bool $runtimeTakesStack = null;
+
     /**
      * @param string $directory directory prefix, relative to the loader
      *                          roots, where anonymous component templates
@@ -50,12 +53,17 @@ final class UxComponentSupport
      * @param EventDispatcherInterface|null $dispatcher a dispatcher with
      *                          listeners already attached; created fresh
      *                          when omitted
+     *
+     * @return EventDispatcherInterface the dispatcher wired into this
+     *                          environment, so a caller that has just
+     *                          registered can attach listeners without going
+     *                          back through dispatcherFor()
      */
     public static function register(
         Environment $twig,
         string $directory = 'components',
         ?EventDispatcherInterface $dispatcher = null
-    ): void {
+    ): EventDispatcherInterface {
         $propertyAccessor = PropertyAccess::createPropertyAccessor();
         $dispatcher ??= new EventDispatcher();
         self::$dispatchers ??= new \WeakMap();
@@ -85,7 +93,7 @@ final class UxComponentSupport
          * argument; 2.x takes two. Supporting both keeps the extra usable on
          * PHP 8.2/8.3 (UX 2.36) and PHP 8.4+ (UX 3.2+) alike.
          */
-        $runtimeTakesStack = (new \ReflectionClass(ComponentRuntime::class))
+        $runtimeTakesStack = self::$runtimeTakesStack ??= (new \ReflectionClass(ComponentRuntime::class))
             ->getConstructor()->getNumberOfParameters() >= 3;
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
             ComponentRuntime::class => static fn (): ComponentRuntime => $runtimeTakesStack
@@ -95,6 +103,8 @@ final class UxComponentSupport
         $twig->addExtension(new ComponentExtension());
         $twig->setLexer(new ComponentLexer($twig));
         $twig->getRuntime(EscaperRuntime::class)->addSafeClass(ComponentAttributes::class, ['html']);
+
+        return $dispatcher;
     }
 
     /*

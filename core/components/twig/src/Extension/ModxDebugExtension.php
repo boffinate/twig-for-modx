@@ -33,21 +33,24 @@ final class ModxDebugExtension extends AbstractExtension
     private const GLOBAL_KEYS = Twig::GLOBAL_KEYS;
     private const MAX_DUMP_SIZE = 2_097_152; // 2MB
 
-    /** Properties on modX (and inherited xPDO) that template authors will find useful — fully expandable. */
-    private const MODX_EXPANDABLE = [
-        // modX
-        'config', 'context', 'resource', 'request', 'response',
-        'user', 'cultureKey', 'resourceIdentifier', 'resourceMethod',
-        'placeholders',
-        'version', 'site_id', 'uuid', 'resourceGenerated',
-        // xPDO
-        'package', 'startTime', 'executedQueries', 'queryTime',
-    ];
-
     /** Properties on xPDO that are useful — fully expandable. */
     private const XPDO_EXPANDABLE = [
         'config', 'package', 'startTime', 'executedQueries', 'queryTime',
     ];
+
+    /** Properties declared by modX itself that template authors will find useful. */
+    private const MODX_OWN_EXPANDABLE = [
+        'context', 'resource', 'request', 'response',
+        'user', 'cultureKey', 'resourceIdentifier', 'resourceMethod',
+        'placeholders',
+        'version', 'site_id', 'uuid', 'resourceGenerated',
+    ];
+
+    /**
+     * modX extends xPDO and VarDumper hands every property to each caster, so
+     * the modX list is its own properties plus the inherited xPDO ones.
+     */
+    private const MODX_EXPANDABLE = [...self::MODX_OWN_EXPANDABLE, ...self::XPDO_EXPANDABLE];
 
     public function getFunctions(): array
     {
@@ -185,6 +188,14 @@ final class ModxDebugExtension extends AbstractExtension
         $collapsed = [];
 
         foreach ($array as $key => $value) {
+            /*
+             * VarDumper marks visibility with a NUL-delimited key prefix.
+             * Caster::PREFIX_PROTECTED / PREFIX_DYNAMIC / PREFIX_VIRTUAL name
+             * three of them, but a private property's prefix embeds the
+             * declaring class ("\0MODX\Revolution\modX\0pdo"), which no
+             * constant can express — so one regex covers every case where a
+             * str_replace over the constants would still need it.
+             */
             $cleanKey = preg_replace('/^\0[^\\0]*\0/', '', $key);
 
             if (in_array($cleanKey, $expandable, true)

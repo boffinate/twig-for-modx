@@ -11,7 +11,7 @@ return [
     ],
     [
         'key' => 'twig.document_pass',
-        'value' => '1',
+        'value' => '0',
         'xtype' => 'combo-boolean',
         'namespace' => 'twig',
         'area' => 'general',

@@ -81,7 +81,7 @@ trait RendersTwigChunks
             return $name;
         }
 
-        $twig = $this->twigParserService();
+        $twig = Twig::fromServices($this->modx);
         if ($twig === null) {
             return $name;
         }
@@ -101,22 +101,11 @@ trait RendersTwigChunks
             return $output;
         }
 
-        $twig = $this->twigParserService();
+        $twig = Twig::fromServices($this->modx);
         if ($twig === null) {
             return $output;
         }
 
         return $twig->renderString($output, $placeholders);
-    }
-
-    private function twigParserService(): ?Twig
-    {
-        if (!$this->modx->services->has('twigparser')) {
-            return null;
-        }
-
-        $twig = $this->modx->services->get('twigparser');
-
-        return $twig instanceof Twig ? $twig : null;
     }
 }

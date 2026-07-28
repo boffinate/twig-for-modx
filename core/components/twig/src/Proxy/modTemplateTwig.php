@@ -51,7 +51,7 @@ class modTemplateTwig extends modTemplate
          * a changed file back to the database, so what is saved is always
          * the source, never the rendered output.
          */
-        $twig = $this->twigParserService();
+        $twig = Twig::fromServices($this->xpdo);
         if ($twig === null
             || $this->xpdo->context === null
             || $this->xpdo->context->key === 'mgr'
@@ -75,16 +75,5 @@ class modTemplateTwig extends modTemplate
         );
 
         return $this->_content;
-    }
-
-    private function twigParserService(): ?Twig
-    {
-        if (!$this->xpdo->services->has('twigparser')) {
-            return null;
-        }
-
-        $twig = $this->xpdo->services->get('twigparser');
-
-        return $twig instanceof Twig ? $twig : null;
     }
 }

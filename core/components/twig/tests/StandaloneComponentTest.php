@@ -9,6 +9,14 @@ use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 
 /*
+ * No MODX involved, so nothing else here loads the addon's dependencies:
+ * pull them in directly, or this file only passes when a MODX-based test
+ * happens to run first.
+ */
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/WritesTemplateFiles.php';
+
+/*
  * Components must be renderable from a Twig environment our own PHP creates
  * and controls, with no MODX parser involved — the shape used when a MODX
  * resource's PHP generates pages directly (e.g. collection pages). No modX
@@ -16,29 +24,17 @@ use Twig\Loader\FilesystemLoader;
  */
 class StandaloneComponentTest extends TestCase
 {
+    use WritesTemplateFiles;
+
     private string $templateDir;
 
     protected function setUp(): void
     {
-        $this->templateDir = sys_get_temp_dir() . '/twig-standalone-' . bin2hex(random_bytes(4));
-        mkdir($this->templateDir . '/components', 0777, true);
-        file_put_contents(
-            $this->templateDir . '/components/Button.html.twig',
-            "{% props label, variant = 'primary' %}\n" .
-            '<a{{ attributes.defaults({class: \'a-btn a-btn--\' ~ variant}) }}>{{ label }}</a>'
-        );
-        file_put_contents(
-            $this->templateDir . '/page.html.twig',
-            '<main><twig:Button :label="cta" variant="secondary" /></main>'
-        );
-    }
-
-    protected function tearDown(): void
-    {
-        unlink($this->templateDir . '/components/Button.html.twig');
-        unlink($this->templateDir . '/page.html.twig');
-        rmdir($this->templateDir . '/components');
-        rmdir($this->templateDir);
+        $this->templateDir = $this->writeTemplateFiles([
+            'components/Button.html.twig' => "{% props label, variant = 'primary' %}\n"
+                . '<a{{ attributes.defaults({class: \'a-btn a-btn--\' ~ variant}) }}>{{ label }}</a>',
+            'page.html.twig' => '<main><twig:Button :label="cta" variant="secondary" /></main>',
+        ], 'twig-standalone-');
     }
 
     private function createEnvironment(): Environment

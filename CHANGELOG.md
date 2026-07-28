@@ -8,7 +8,11 @@
   pdoTools-based snippets (pdoMenu, pdoResources, ...) render Twig with the
   chunk's resolved placeholders — including `@INLINE` bindings and fast
   mode. These chunks bypass the MODX parser's `getElement()`, so the
-  modChunkTwig proxy never saw them before
+  modChunkTwig proxy never saw them before. The namespace bootstrap now sets
+  both options itself immediately before it resolves the shared `pdotools`
+  service, which is the only point early enough to win the race — keep them
+  as real system settings as well, for the services resolved after
+  `_initContext()` rebuilds the config
 - **BREAKING: Twig no longer compiles the assembled document by default.**
   The catch-all pass over the uncacheable document is now gated behind a new
   `twig.document_pass` system setting, **off by default**. That pass has no
@@ -39,6 +43,12 @@
   substituted); and it is part of the *cacheable* pass, so it is evaluated
   at cache generation rather than per request as it was when the document
   pass drove it. Emit `[[!snippet]]` tags from Twig for per-request data
+
+- Compiled templates are no longer auto-reloaded outside debug mode, so
+  production stops stat-ing every template file per request. The
+  TwigCacheClear plugin now also listens on `OnCacheUpdate` (not just
+  `OnSiteRefresh`), so `modCacheManager::refresh()` — what deploy scripts
+  call — clears the compiled templates too
 
 - Add `tests/SecurityBoundaryTest.php`: executable coverage of what may and
   may not be compiled — query-string input echoed into a page, editor

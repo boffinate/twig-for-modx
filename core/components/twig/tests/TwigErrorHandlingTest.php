@@ -22,14 +22,6 @@ class TwigErrorHandlingTest extends ParserTestCase
         $this->modx->setOption('twig.debug', true);
     }
 
-    private function twigParser(): Twig
-    {
-        $parser = $this->modx->parser;
-        $this->assertInstanceOf(Twig::class, $parser);
-
-        return $parser;
-    }
-
     public function test_debug_mode_returns_source_on_error(): void
     {
         $this->modx->setOption('twig.debug', true);

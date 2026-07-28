@@ -14,6 +14,40 @@ $modx->services->add('twigparser', function ($c) use ($modx) {
     return $c->get(\Boffinate\Twig\Twig::class);
 });
 
+/*
+ * Point pdoTools at the Twig-aware service classes, so Twig renders in tpl
+ * chunks that pdoTools fetches outside the MODX parser.
+ *
+ * This has to happen here, immediately below, because the next line resolves
+ * the `twigparser` service and Twig's constructor force-resolves the shared
+ * `pdotools` service with it — pdoTools reads `pdotools_pdotools_class` once,
+ * when that service is built. Nothing later (a settings plugin on OnMODXInit,
+ * for instance) can get in ahead of it, which makes this bootstrap the only
+ * layer that can guarantee the options are set first.
+ *
+ * Consuming sites should still persist these as real system settings:
+ * $modx->config is rebuilt from the database by _initContext(), so services
+ * resolved after that point read the stored values, not these.
+ *
+ * class_exists() on the subclass alone would be fatal when pdoTools is
+ * absent — autoloading it would look for a parent that is not there — hence
+ * the check on pdoTools' own class first.
+ */
+foreach ([
+    'pdotools_pdotools_class' => [
+        ModxPro\PdoTools\CoreTools::class,
+        Boffinate\Twig\PdoTools\CoreToolsTwig::class,
+    ],
+    'pdotools_fetch_class' => [
+        ModxPro\PdoTools\Fetch::class,
+        Boffinate\Twig\PdoTools\FetchTwig::class,
+    ],
+] as $option => [$pdoToolsClass, $twigClass]) {
+    if (class_exists($pdoToolsClass) && class_exists($twigClass)) {
+        $modx->setOption($option, $twigClass);
+    }
+}
+
 // Install as $modx->parser, wrapping the existing parser (pdoTools or core)
 // so Twig renders {{ }}/{% %} before MODX tags and Fenom are processed.
 $modx->services->get('twigparser')->decorateParser();

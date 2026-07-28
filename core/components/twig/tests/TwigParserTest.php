@@ -47,13 +47,6 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame('Resource {{ 3 * 3 }} MODX', $output);
     }
 
-    public function test_modx_template_with_valid_twig_is_rendered(): void
-    {
-        $content = 'Sum: {{ 2 + 3 }}';
-
-        $this->assertSame('Sum: 5', $this->processContent($content));
-    }
-
     public function test_twig_can_render_chunk_via_builtin_function(): void
     {
         $this->registerChunk('FunctionChunk', 'Built {{ name|upper }}');

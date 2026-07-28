@@ -56,6 +56,24 @@ class Twig extends ParserBase
     }
 
     /**
+     * The registered `twigparser` service, or null when this addon is not
+     * bootstrapped (or something else claimed the service name). Callers hold
+     * an xPDO instance rather than a modX in places — an element's $xpdo, a
+     * pdoTools service's $modx — so the guard lives here rather than being
+     * restated by each of them.
+     */
+    public static function fromServices(xPDO $xpdo): ?self
+    {
+        if (!$xpdo->services->has('twigparser')) {
+            return null;
+        }
+
+        $twig = $xpdo->services->get('twigparser');
+
+        return $twig instanceof self ? $twig : null;
+    }
+
+    /**
      * Install this parser as $modx->parser so that Twig renders first
      * and the parent parser (pdoTools or core) handles MODX tags and
      * Fenom afterwards.
@@ -143,13 +161,25 @@ class Twig extends ParserBase
     {
         if (isset($this->twig)) return;
 
-        $cachePath = $this->getCachePath();
+        $cachePath = self::getCompiledTemplatesPath($this->modx);
         $loader = $this->buildLoader();
         $debug = (bool) $this->modx->getOption('twig.debug', null, true);
+        /*
+         * auto_reload follows debug: in production it costs a filemtime()
+         * stat per template per request, to catch edits that only happen at
+         * deploy time. Deploy-time invalidation is already covered — the
+         * TwigCacheClear plugin calls clearCompiledTemplatesForModx() on
+         * OnSiteRefresh and OnCacheUpdate, so clearing the MODX cache
+         * (manager button, ClearCache processor, cacheManager->refresh())
+         * empties {cache_path}/twig/ with it. Chunk and template sources are
+         * compiled from strings, not files, so they are keyed by content and
+         * cannot go stale in the first place; auto_reload only ever mattered
+         * for templates loaded from disk.
+         */
         $this->twig = new \Twig\Environment($loader, [
             'debug' => $debug,
             'cache' => $cachePath,
-            'auto_reload' => true,
+            'auto_reload' => $debug,
         ]);
         if ($debug) {
             $this->twig->addExtension(new ModxDebugExtension($this->modx));
@@ -272,18 +302,15 @@ class Twig extends ParserBase
     {
         $this->templatePaths[$namespace][] = $path;
 
-        if (isset($this->twig)) {
-            unset($this->twig);
-        }
+        /* Drop any built environment so init() rebuilds it with the new path. */
+        unset($this->twig);
     }
 
     public function registerInitializer(callable $initializer): void
     {
         $this->initializers[] = $initializer;
 
-        if (isset($this->twig)) {
-            unset($this->twig);
-        }
+        unset($this->twig);
     }
 
     public function registerExtension(ExtensionInterface $extension): void
@@ -308,16 +335,10 @@ class Twig extends ParserBase
             );
 
             foreach ($iterator as $item) {
-                $pathname = $item->getPathname();
                 if ($item->isDir()) {
-                    if (is_dir($pathname)) {
-                        @rmdir($pathname);
-                    }
-                    continue;
-                }
-
-                if (is_file($pathname)) {
-                    @unlink($pathname);
+                    @rmdir($item->getPathname());
+                } else {
+                    @unlink($item->getPathname());
                 }
             }
         }
@@ -336,11 +357,6 @@ class Twig extends ParserBase
         }
 
         return $cachePath;
-    }
-
-    private function getCachePath(): string
-    {
-        return self::getCompiledTemplatesPath($this->modx);
     }
 
     /**
