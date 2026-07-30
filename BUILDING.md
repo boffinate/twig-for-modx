@@ -86,7 +86,7 @@ The helper functions that enforce the correct behavior are:
 
 If the package README does not show during install, do not assume the package metadata is missing.
 
-The package manifest already includes `license`, `readme`, and `changelog`. Check the extracted package:
+The package manifest already includes `license`, `readme`, `changelog`, and the dynamic `setup-options` form. Check the extracted package:
 
 ```text
 core/packages/twig-<version>-pl/manifest.php
@@ -104,7 +104,7 @@ That breaks the package-before-install tabs before the README can render. It is 
 If a build or install looks wrong, check:
 
 1. `core/packages/twig-<version>-pl.transport.zip` exists.
-2. `core/packages/twig-<version>-pl/manifest.php` contains `readme`, `license`, and `changelog`.
+2. `core/packages/twig-<version>-pl/manifest.php` contains `readme`, `license`, `changelog`, and `setup-options`.
 3. The category vehicle uses `"name":"twig"`, not `"name":"components"`, in the file resolver definitions.
 4. The targeted regression test still passes:
 

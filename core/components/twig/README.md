@@ -389,6 +389,8 @@ Point pdoTools at them via two system settings:
 | `pdotools_pdotools_class` | `Boffinate\Twig\PdoTools\CoreToolsTwig` |
 | `pdotools_fetch_class` | `Boffinate\Twig\PdoTools\FetchTwig` |
 
+When pdoTools is present, the package installer offers to save these settings for you. The option is checked by default unless either setting already has a custom value; in that case it is left unchecked so installation does not silently replace the site's configuration.
+
 With these registered, Twig renders in tpl chunks (including `@INLINE`
 bindings and `&fastMode`) with the row placeholders pdoTools resolved for
 the chunk, so `{{ pagetitle }}` works in a pdoResources tpl. The classes

@@ -90,13 +90,20 @@ if ($assetsResolver = twigBuildAssetsResolverDefinition($config)) {
     $vehicle->resolve('file', $assetsResolver);
 }
 
+$vehicle->resolve('php', [
+    'source' => __DIR__ . '/resolvers/pdotools-settings.resolver.php',
+]);
+
 $builder->putVehicle($vehicle);
-$modx->log(modX::LOG_LEVEL_INFO, 'Packaged category and file vehicles.');
+$modx->log(modX::LOG_LEVEL_INFO, 'Packaged category, files, and pdoTools settings resolver.');
 
 $builder->setPackageAttributes([
     'license' => file_get_contents($config['repo_root'] . '/LICENSE.md'),
     'readme' => file_get_contents($config['repo_root'] . '/README.md'),
     'changelog' => file_get_contents($config['repo_root'] . '/CHANGELOG.md'),
+    'setup-options' => [
+        'source' => __DIR__ . '/setup.options.php',
+    ],
 ]);
 
 $builder->pack();
