@@ -159,6 +159,7 @@ The addon ships with MODX-aware helpers:
 - `lexicon(key, params = {}, language = '')`
 - `trans(key, topic = '', params = {}, language = '')`
 - `link(id, params = '', context = '', scheme = -1, options = {})`
+- `resource_url(value)` resolves positive integer IDs and digit-only string IDs through MODX. Digit-only strings retain the legacy ContentBlocks behavior, including `"0"`; typed integers must be positive. Other strings pass through unchanged; null, arrays, and non-stringable objects become `''`; floats, booleans, and `Stringable` objects are stringified without being reinterpreted as IDs
 - `field(name, default = null, resource = null)`
 
 Examples:
@@ -170,6 +171,7 @@ Examples:
 {{ option('site_name') }}
 {{ trans('setting_site_name', 'en:setting') }}
 {{ link(12) }}
+{{ resource_url(content_blocks_link_value) }}
 {{ field('pagetitle') }}
 {{ field('HeroImage', '/fallback.jpg') }}
 ```

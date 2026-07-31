@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add `resource_url()` for ContentBlocks-style link values: positive integer IDs and legacy digit-only string IDs (including `"0"`) resolve through MODX, aliases and absolute URLs pass through unchanged, and unsupported Twig values are normalized without weak-type ID coercion
 - Let the ContentBlocks bridge degrade to unchanged Twig placeholders, with a once-per-request error log, when the `twigparser` service is unavailable
 - Stop Twig parser tests leaking pdoTools' shared `useFenomParser` config between tests, so the suite is reliable under random execution order
 - Add a pdoTools-aware package setup option: clean installs detect pdoTools and offer to persist the two Twig service-class settings, while preserving existing custom values unless the installer explicitly opts in

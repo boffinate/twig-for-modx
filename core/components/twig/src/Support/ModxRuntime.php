@@ -61,6 +61,36 @@ class ModxRuntime
         return $this->modx->makeUrl($id, $contextKey, $params, $scheme, $options);
     }
 
+    /**
+     * Resolve positive integer IDs and legacy digit-only strings as MODX resources.
+     *
+     * Other strings pass through unchanged. Null and non-stringable values
+     * become an empty string; other scalar and Stringable values are safely
+     * stringified without being reinterpreted as resource IDs. Digit-only
+     * strings intentionally retain ContentBlocks' legacy handling of `"0"`;
+     * typed integers must be positive.
+     */
+    public function resourceUrl(mixed $value): string
+    {
+        if (is_int($value)) {
+            return $value > 0 ? $this->link($value) : (string) $value;
+        }
+
+        if (is_string($value)) {
+            return ctype_digit($value) ? $this->link($value) : $value;
+        }
+
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_scalar($value) || $value instanceof \Stringable) {
+            return (string) $value;
+        }
+
+        return '';
+    }
+
     public function field(mixed $name, mixed $default = null, mixed $resource = null): mixed
     {
         [$name, $default, $resource] = $this->normalizeFieldRequest($name, $default, $resource);

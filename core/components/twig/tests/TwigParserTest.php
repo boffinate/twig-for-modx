@@ -106,6 +106,59 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame($expected, $this->processContent('{{ link(' . (int) $resource->get('id') . ') }}'));
     }
 
+    public function test_resource_url_resolves_numeric_resource_ids_and_preserves_urls(): void
+    {
+        $resource = $this->registerResource([
+            'pagetitle' => 'Resource URL',
+            'alias' => 'resource-url',
+        ]);
+        $id = (int) $resource->get('id');
+        $expected = $this->modx->makeUrl($id);
+
+        $this->assertSame($expected, $this->processContent('{{ resource_url(' . $id . ') }}'));
+        $this->assertSame($expected, $this->processContent('{{ resource_url("' . $id . '") }}'));
+        $this->assertSame('some-alias', $this->processContent('{{ resource_url("some-alias") }}'));
+        $this->assertSame('', $this->processContent('{{ resource_url("") }}'));
+        $this->assertSame(
+            'https://example.com/a-page',
+            $this->processContent('{{ resource_url("https://example.com/a-page") }}')
+        );
+    }
+
+    public function test_resource_url_preserves_unsupported_twig_value_types_without_resolving_them(): void
+    {
+        $id = 123;
+        $twig = $this->twigParser();
+        $render = static fn (mixed $value): string => $twig->renderString(
+            '{{ resource_url(value) }}',
+            ['value' => $value]
+        );
+        $stringableId = new class((string) $id) implements \Stringable {
+            public function __construct(private string $value)
+            {
+            }
+
+            public function __toString(): string
+            {
+                return $this->value;
+            }
+        };
+
+        $this->assertSame((string) (float) $id, $render((float) $id), 'A whole float must not resolve as an ID.');
+        $this->assertSame($id . '.5', $render($id + 0.5));
+        $this->assertSame('1', $render(true));
+        $this->assertSame('', $render(false));
+        $this->assertSame('', $render(null));
+        $this->assertSame('', $render([]));
+        $this->assertSame('', $render(new \stdClass()));
+        $this->assertSame((string) $id, $render($stringableId), 'A Stringable digit value must not resolve as an ID.');
+        $this->assertSame('-1', $render(-1));
+        $this->assertSame('-1', $render('-1'));
+        $this->assertSame('0', $render(0));
+        $this->assertSame($this->modx->makeUrl('0'), $render('0'));
+        $this->assertSame(' ' . $id . ' ', $render(' ' . $id . ' '));
+    }
+
     public function test_twig_field_helper_reads_resource_fields_and_template_variables(): void
     {
         $this->registerTemplateVar('HeroTitle');

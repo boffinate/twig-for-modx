@@ -30,6 +30,7 @@ class ModxExtension extends AbstractExtension
             new TwigFunction('lexicon', [$this->runtime, 'lexicon']),
             new TwigFunction('trans', [$this->runtime, 'translate']),
             new TwigFunction('link', [$this->runtime, 'link']),
+            new TwigFunction('resource_url', [$this->runtime, 'resourceUrl']),
             new TwigFunction('field', [$this->runtime, 'field']),
         ];
     }
