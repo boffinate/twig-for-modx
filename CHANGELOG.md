@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Let the ContentBlocks bridge degrade to unchanged Twig placeholders, with a once-per-request error log, when the `twigparser` service is unavailable
 - Stop Twig parser tests leaking pdoTools' shared `useFenomParser` config between tests, so the suite is reliable under random execution order
 - Add a pdoTools-aware package setup option: clean installs detect pdoTools and offer to persist the two Twig service-class settings, while preserving existing custom values unless the installer explicitly opts in
 - Add Twig-aware pdoTools subclasses (`Boffinate\Twig\PdoTools\CoreToolsTwig` and `FetchTwig`, registered via the `pdotools_pdotools_class` and `pdotools_fetch_class` system settings) so tpl chunks fetched by pdoTools-based snippets (pdoMenu, pdoResources, ...) render Twig with the chunk's resolved placeholders — including `@INLINE` bindings and fast mode. These chunks bypass the MODX parser's `getElement()`, so the modChunkTwig proxy never saw them before. The namespace bootstrap now sets both options itself immediately before it resolves the shared `pdotools` service, which is the only point early enough to win the race — keep them as real system settings as well, for the services resolved after `_initContext()` rebuilds the config

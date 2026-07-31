@@ -9,12 +9,43 @@ declare(strict_types=1);
  * @var array<string, mixed> $phs
  */
 
-if (!\Boffinate\Twig\Twig::containsTwigSyntax($tpl)) {
+if (
+    !str_contains($tpl, '{{')
+    && !str_contains($tpl, '{%')
+    && !str_contains($tpl, '{#')
+    && !str_contains($tpl, '<twig:')
+) {
     return;
 }
 
-/** @var \Boffinate\Twig\Twig $twig */
-$twig = $modx->services->get('twigparser');
+$failureFlag = '__twig_contentblocks_parser_unavailable';
+if ($modx->getOption($failureFlag, null, false)) {
+    $modx->event->_output = $tpl;
+    return;
+}
+
+try {
+    if (!class_exists(\Boffinate\Twig\Twig::class)) {
+        throw new \RuntimeException('Boffinate\\Twig\\Twig is not autoloadable');
+    }
+
+    $twig = \Boffinate\Twig\Twig::fromServices($modx);
+} catch (\Throwable $e) {
+    $twig = null;
+    $twigFailure = $e;
+}
+
+if ($twig === null) {
+    $message = '[TwigContentBlocks] twigparser service unavailable — CB field templates will render without Twig';
+    if (isset($twigFailure)) {
+        $message .= sprintf(' (%s: %s)', $twigFailure::class, $twigFailure->getMessage());
+    }
+
+    $modx->log(\xPDO\xPDO::LOG_LEVEL_ERROR, $message);
+    $modx->setOption($failureFlag, true);
+    $modx->event->_output = $tpl;
+    return;
+}
 if (!is_array($phs)) {
     $matches = [];
     $modx->parser->collectElementTags($tpl, $matches);
