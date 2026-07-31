@@ -33,6 +33,8 @@ abstract class ParserTestCase extends MODxTestCase
     /** @var int[] */
     private array $registeredTemplateIds = [];
     private ?modResource $originalResource = null;
+    private bool $hasPdoToolsConfigSnapshot = false;
+    private mixed $originalUseFenomParser = null;
 
     /**
      * @before
@@ -42,6 +44,7 @@ abstract class ParserTestCase extends MODxTestCase
         parent::setUpFixtures();
         $this->originalResource = $this->modx->resource instanceof modResource ? $this->modx->resource : null;
 
+        $this->snapshotPdoToolsConfig();
         $this->loadPdoTools();
         if ($this->usesTwigParser()) {
             $this->loadTwig();
@@ -59,6 +62,7 @@ abstract class ParserTestCase extends MODxTestCase
      */
     public function tearDownFixtures(): void
     {
+        $this->restorePdoToolsConfig();
         $this->cleanupSnippets();
         $this->cleanupPlugins();
         $this->cleanupResources();
@@ -84,6 +88,51 @@ abstract class ParserTestCase extends MODxTestCase
         if (!$this->modx->services->has('pdotools') && file_exists($bootstrapPath)) {
             $modx = $this->modx;
             require_once $bootstrapPath;
+        }
+    }
+
+    /** Temporarily change Fenom parsing on the shared pdoTools service. */
+    protected function withFenomParser(bool $enabled, callable $callback): mixed
+    {
+        $pdoTools = $this->modx->services->get('pdotools');
+        $previous = $pdoTools->config('useFenomParser');
+
+        if ($previous !== $enabled) {
+            $pdoTools->config(['useFenomParser' => $enabled]);
+        }
+
+        try {
+            return $callback();
+        } finally {
+            if ($pdoTools->config('useFenomParser') !== $previous) {
+                $pdoTools->config(['useFenomParser' => $previous]);
+            }
+        }
+    }
+
+    private function snapshotPdoToolsConfig(): void
+    {
+        $this->originalUseFenomParser = $this->modx->services->has('pdotools')
+            ? $this->modx->services->get('pdotools')->config('useFenomParser')
+            : $this->modx->getOption('pdotools_fenom_parser', null, false);
+        $this->hasPdoToolsConfigSnapshot = true;
+    }
+
+    private function restorePdoToolsConfig(): void
+    {
+        if (!$this->hasPdoToolsConfigSnapshot) {
+            return;
+        }
+
+        $this->hasPdoToolsConfigSnapshot = false;
+
+        if (!$this->modx->services->has('pdotools')) {
+            return;
+        }
+
+        $pdoTools = $this->modx->services->get('pdotools');
+        if ($pdoTools->config('useFenomParser') !== $this->originalUseFenomParser) {
+            $pdoTools->config(['useFenomParser' => $this->originalUseFenomParser]);
         }
     }
 

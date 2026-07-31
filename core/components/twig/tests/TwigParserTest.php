@@ -651,14 +651,38 @@ class TwigParserTest extends ParserTestCase
         $pdoTools = $this->modx->services->get('pdotools');
         $pdoParser = new \ModxPro\PdoTools\Parsing\Parser($this->modx, $pdoTools);
 
-        // Enable Fenom for this parser instance
-        $pdoTools->setConfig(['useFenomParser' => true]);
-
         $this->modx->setPlaceholder('name', 'Fenom');
         $content = 'Hello {$_pls["name"]}';
-        $pdoParser->processElementTags('', $content, true, true, '[[', ']]', [], 10);
+
+        $this->withFenomParser(true, function () use ($pdoParser, &$content): void {
+            $pdoParser->processElementTags('', $content, true, true, '[[', ']]', [], 10);
+        });
 
         $this->assertSame('Hello Fenom', $content);
+    }
+
+    public function test_fenom_config_is_restored_when_callback_throws(): void
+    {
+        $pdoTools = $this->modx->services->get('pdotools');
+        $original = $pdoTools->config('useFenomParser');
+        $temporary = !(bool) $original;
+        $expectedException = new \RuntimeException('Expected test exception');
+
+        try {
+            $this->withFenomParser($temporary, function () use (
+                $pdoTools,
+                $temporary,
+                $expectedException
+            ): void {
+                $this->assertSame($temporary, $pdoTools->config('useFenomParser'));
+                throw $expectedException;
+            });
+            $this->fail('The callback exception should be rethrown.');
+        } catch (\RuntimeException $caught) {
+            $this->assertSame($expectedException, $caught);
+        }
+
+        $this->assertSame($original, $pdoTools->config('useFenomParser'));
     }
 
     public function test_pdotools_inline_chunk_rendering_works_alongside_twig(): void
@@ -688,10 +712,12 @@ class TwigParserTest extends ParserTestCase
         // Now pass through PDOTools Parser with Fenom enabled
         $pdoTools = $this->modx->services->get('pdotools');
         $pdoParser = new \ModxPro\PdoTools\Parsing\Parser($this->modx, $pdoTools);
-        $pdoTools->setConfig(['useFenomParser' => true]);
 
         $this->modx->setPlaceholder('name', 'World');
-        $pdoParser->processElementTags('', $twigRendered, true, true, '[[', ']]', [], 10);
+
+        $this->withFenomParser(true, function () use ($pdoParser, &$twigRendered): void {
+            $pdoParser->processElementTags('', $twigRendered, true, true, '[[', ']]', [], 10);
+        });
 
         $this->assertSame('Twig: 4 Fenom: World', $twigRendered);
     }
