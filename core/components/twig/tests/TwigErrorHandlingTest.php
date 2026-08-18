@@ -37,12 +37,20 @@ class TwigErrorHandlingTest extends ParserTestCase
         $this->assertSame('', $this->twigParser()->renderString('Broken {{ name| }}', []));
     }
 
-    public function test_production_mode_neutralizes_document_pass_errors(): void
+    /*
+     * The neutralize fallback (used by modTemplateTwig, where an empty
+     * result would strip the layout off the page): the markup survives with
+     * the Twig delimiters made inert.
+     */
+    public function test_production_mode_neutralize_fallback_keeps_markup(): void
     {
         $this->modx->setOption('twig.debug', false);
 
-        $content = 'Before {{ name| }} after';
-        $output = $this->processContent($content);
+        $output = $this->twigParser()->renderString(
+            'Before {{ name| }} after',
+            [],
+            Twig::ERROR_FALLBACK_NEUTRALIZE
+        );
 
         $this->assertStringNotContainsString('{{', $output);
         $this->assertStringContainsString('Before', $output);

@@ -291,21 +291,16 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame('Start Snippet output End', $this->processContent($content));
     }
 
-    public function test_snippet_output_twig_template_is_parsed(): void
+    /*
+     * Snippet output is not an element template: Twig it emits stays
+     * uncompiled (SecurityBoundaryTest owns the rationale). Twig belongs in
+     * the tpl chunks a snippet renders, where the chunk author decided it.
+     */
+    public function test_snippet_output_twig_is_not_compiled(): void
     {
         $this->registerSnippet('TwigTemplateSnippet', 'return "Twig math {{ 3 * 3 }}";');
 
-        $this->assertSame('Twig math 9', $this->processContent('[[TwigTemplateSnippet]]'));
-    }
-
-    public function test_snippet_output_with_twig_syntax_is_rendered(): void
-    {
-        $this->registerSnippet(
-            'TwigFilterSnippet',
-            'return "{% set word = \"twig\" %}Word {{ word|upper }}";'
-        );
-
-        $this->assertSame('Word TWIG', $this->processContent('[[TwigFilterSnippet]]'));
+        $this->assertSame('Twig math {{ 3 * 3 }}', $this->processContent('[[TwigTemplateSnippet]]'));
     }
 
     public function test_twigparser_service_resolves_parser_instance(): void
@@ -320,13 +315,6 @@ class TwigParserTest extends ParserTestCase
         $this->registerChunk('BrokenTwigChunk', 'Broken {{ name ');
 
         $this->assertSame('Broken {{ name', $this->processContent('[[$BrokenTwigChunk? &name=`World`]]'));
-    }
-
-    public function test_snippet_output_with_invalid_twig_syntax_passes_through(): void
-    {
-        $this->registerSnippet('BrokenTwigSnippet', 'return "Broken {{ name ";');
-
-        $this->assertSame('Broken {{ name', $this->processContent('[[BrokenTwigSnippet]]'));
     }
 
     public function test_dump_outputs_single_variable(): void
@@ -797,55 +785,27 @@ class TwigParserTest extends ParserTestCase
     }
 
     /*
-     * With `twig.document_pass` disabled, raw Twig in the assembled document
-     * must stay untouched (editor content is never compiled as Twig), while
-     * chunks resolved through getElement() still render Twig via the
-     * modChunkTwig proxy.
+     * The assembled document is never a Twig template — editor content,
+     * snippet output and request data are one string by the time the parser
+     * sees it — while chunks resolved through getElement() still render
+     * their own Twig via the modChunkTwig proxy.
      */
-    public function test_document_pass_can_be_disabled_while_chunks_still_render_twig(): void
+    public function test_document_content_is_not_compiled_while_chunks_still_render_twig(): void
     {
         $this->registerChunk('GatedTwigChunk', 'Chunk {{ 2 + 2 }}');
 
-        $output = $this->processContentWithoutDocumentPass('{{ 2 + 2 }} [[$GatedTwigChunk]]');
+        $output = $this->processDocument('{{ 2 + 2 }} [[$GatedTwigChunk]]');
 
         $this->assertSame('{{ 2 + 2 }} Chunk 4', $output);
     }
 
     /*
-     * The shipped default, with nothing configured: content is not a
-     * template. An installation that never touches `twig.document_pass` must
-     * not compile whatever an editor typed into a resource — everything Twig
-     * renders is an element someone with element access authored.
+     * Templates render Twig at element level — the modTemplateTwig proxy on
+     * modResource's Template relation.
      */
-    public function test_document_pass_is_off_by_default(): void
-    {
-        $this->registerChunk('DefaultGateChunk', 'Chunk {{ 2 + 2 }}');
-        unset($this->modx->config['twig.document_pass']);
-
-        $output = $this->processContentWithConfiguredDocumentPass('{{ 2 + 2 }} [[$DefaultGateChunk]]');
-
-        $this->assertSame('{{ 2 + 2 }} Chunk 4', $output);
-    }
-
-    /*
-     * The escape hatch still works, for sites with chunk-fetching paths that
-     * element-level rendering does not reach.
-     */
-    public function test_document_pass_compiles_document_content_when_enabled(): void
-    {
-        $output = $this->processContent('{{ 2 + 2 }}');
-
-        $this->assertSame('4', $output);
-    }
-
-    /*
-     * Templates render Twig at element level, with no document pass — the
-     * modTemplateTwig proxy on modResource's Template relation.
-     */
-    public function test_template_renders_twig_without_the_document_pass(): void
+    public function test_template_renders_twig_at_element_level(): void
     {
         $this->modx->setPlaceholder('name', 'MODX');
-        unset($this->modx->config['twig.document_pass']);
 
         $output = $this->renderTemplateContent('Template {{ 2 + 2 }} [[+name]]');
 
@@ -853,13 +813,12 @@ class TwigParserTest extends ParserTestCase
     }
 
     /*
-     * ...and that is the proxy doing it, not the document pass leaking back
-     * in: an unproxied core modTemplate leaves the Twig alone.
+     * ...and that is the proxy doing it, not the parser: an unproxied core
+     * modTemplate leaves the Twig alone.
      */
     public function test_core_template_class_does_not_render_twig(): void
     {
         $this->modx->setPlaceholder('name', 'MODX');
-        unset($this->modx->config['twig.document_pass']);
 
         $output = $this->renderPlainTemplateContent('Template {{ 2 + 2 }} [[+name]]');
 

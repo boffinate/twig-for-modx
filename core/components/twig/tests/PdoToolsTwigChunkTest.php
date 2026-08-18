@@ -100,8 +100,8 @@ class PdoToolsTwigChunkTest extends ParserTestCase
      * before parsing. Sites have tpl chunks written that way, so a body that
      * is not valid Twig has to come back untouched for pdoTools to convert
      * as before. This is the compatibility promise that makes the subclasses
-     * safe to switch on, and with the document pass off by default they are
-     * the only thing rendering these chunks.
+     * safe to switch on, and since the document is never Twig-compiled they
+     * are the only thing rendering these chunks.
      */
     public function test_inline_chunk_keeps_legacy_modx_tag_shorthand(): void
     {

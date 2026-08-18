@@ -88,12 +88,17 @@ class TwigParserCacheTest extends ParserTestCase
         $this->assertSame('Base math 2 | Chunk twig value CHUNKED', $this->processContent($content));
     }
 
-    public function test_chunk_outputting_raw_twig_tags_is_parsed_once_in_base_template_cycle(): void
+    /*
+     * A chunk whose OUTPUT contains Twig delimiters (here via a string
+     * literal) is rendered exactly once: what it emits lands in the document,
+     * and the document is never compiled.
+     */
+    public function test_chunk_outputting_raw_twig_tags_is_not_reparsed(): void
     {
         $this->registerChunk('RawTwigChunk', '{{ "{{ 5 + 5 }}" }}');
         $content = 'Base math {{ 2 + 2 }} + [[$RawTwigChunk]]';
 
-        $this->assertSame('Base math 4 + 10', $this->processContent($content));
+        $this->assertSame('Base math 4 + {{ 5 + 5 }}', $this->processContent($content));
     }
 
     public function test_compiled_templates_are_cached_on_disk(): void
@@ -131,13 +136,23 @@ class TwigParserCacheTest extends ParserTestCase
         $this->assertTrue(true); // explicit assertion to satisfy PHPUnit when only freshness checks run
     }
 
-    public function test_on_cache_update_plugin_clears_twig_cache_during_modx_refresh(): void
+    /*
+     * String sources are compiled under content-hash keys, so a partial
+     * cache refresh (what OnCacheUpdate delivers on every manager resource
+     * save — db, auto_publish, context_settings, resource) has nothing to
+     * invalidate: the plugin hears the event and must leave the compiled
+     * tree alone.
+     */
+    public function test_partial_cache_refresh_leaves_compiled_twig_cache_alone(): void
     {
         $this->clearTwigCache();
         $this->registerPlugin(
             'TwigCacheUpdatePlugin',
             file_get_contents(MODX_CORE_PATH . 'components/twig/elements/plugins/TwigCacheClear.php'),
-            [['name' => 'OnCacheUpdate', 'enabled' => true]]
+            [
+                ['name' => 'OnSiteRefresh', 'enabled' => true],
+                ['name' => 'OnCacheUpdate', 'enabled' => true],
+            ]
         );
 
         $this->processContent('Cached {{ 8 * 8 }}');
@@ -145,6 +160,33 @@ class TwigParserCacheTest extends ParserTestCase
 
         $results = [];
         $this->modx->cacheManager->refresh(['default' => []], $results);
+
+        $this->assertGreaterThan(0, $this->countCacheFiles());
+    }
+
+    /*
+     * Deploy scripts call modCacheManager::refresh() for everything, which
+     * fires OnCacheUpdate (never OnSiteRefresh) with the `scripts`
+     * partition in the map. Disk-loaded templates change exactly then, so
+     * that shape of refresh must take the compiled Twig cache with it.
+     */
+    public function test_full_cache_refresh_clears_compiled_twig_cache(): void
+    {
+        $this->clearTwigCache();
+        $this->registerPlugin(
+            'TwigCacheUpdatePlugin',
+            file_get_contents(MODX_CORE_PATH . 'components/twig/elements/plugins/TwigCacheClear.php'),
+            [
+                ['name' => 'OnSiteRefresh', 'enabled' => true],
+                ['name' => 'OnCacheUpdate', 'enabled' => true],
+            ]
+        );
+
+        $this->processContent('Cached {{ 9 * 9 }}');
+        $this->assertGreaterThan(0, $this->countCacheFiles());
+
+        $results = [];
+        $this->modx->cacheManager->refresh(['scripts' => [], 'default' => []], $results);
 
         $this->assertSame(0, $this->countCacheFiles());
     }
@@ -156,7 +198,6 @@ class TwigParserCacheTest extends ParserTestCase
             'TwigSiteRefreshPlugin',
             file_get_contents(MODX_CORE_PATH . 'components/twig/elements/plugins/TwigCacheClear.php'),
             [
-                ['name' => 'OnCacheUpdate', 'enabled' => true],
                 ['name' => 'OnSiteRefresh', 'enabled' => true],
             ]
         );

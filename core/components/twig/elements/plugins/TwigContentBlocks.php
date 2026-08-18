@@ -19,30 +19,23 @@ if (
 }
 
 $failureFlag = '__twig_contentblocks_parser_unavailable';
-if ($modx->getOption($failureFlag, null, false)) {
+$message = '[TwigContentBlocks] twigparser service unavailable — CB field templates will render without Twig';
+
+if (!class_exists(\Boffinate\Twig\Twig::class)) {
+    /*
+     * The one failure fromServicesOrLogOnce() cannot report itself: with the
+     * class missing there is no static method to call, so log-once here.
+     */
+    if (!$modx->getOption($failureFlag, null, false)) {
+        $modx->log(\xPDO\xPDO::LOG_LEVEL_ERROR, $message . ' (Boffinate\\Twig\\Twig is not autoloadable)');
+        $modx->setOption($failureFlag, true);
+    }
     $modx->event->_output = $tpl;
     return;
 }
 
-try {
-    if (!class_exists(\Boffinate\Twig\Twig::class)) {
-        throw new \RuntimeException('Boffinate\\Twig\\Twig is not autoloadable');
-    }
-
-    $twig = \Boffinate\Twig\Twig::fromServices($modx);
-} catch (\Throwable $e) {
-    $twig = null;
-    $twigFailure = $e;
-}
-
+$twig = \Boffinate\Twig\Twig::fromServicesOrLogOnce($modx, $failureFlag, $message);
 if ($twig === null) {
-    $message = '[TwigContentBlocks] twigparser service unavailable — CB field templates will render without Twig';
-    if (isset($twigFailure)) {
-        $message .= sprintf(' (%s: %s)', $twigFailure::class, $twigFailure->getMessage());
-    }
-
-    $modx->log(\xPDO\xPDO::LOG_LEVEL_ERROR, $message);
-    $modx->setOption($failureFlag, true);
     $modx->event->_output = $tpl;
     return;
 }

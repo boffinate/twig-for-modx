@@ -7,10 +7,11 @@ This extra lets you use Twig syntax inside normal MODX content flows.
 It does not replace MODX rendering with a separate file-based Twig application. Instead, it adds a Twig pass inside the existing MODX parser cycle, so you can mix Twig with normal MODX tags in:
 
 - templates
-- resources
 - chunks
-- snippet output
+- pdoTools tpl chunks
 - supported plugin integrations such as ContentBlocks
+
+Resource content, TV values, snippet output and the assembled document are deliberately never compiled — see "What Twig Compiles" below.
 
 That means all of these can live together in the same markup:
 
@@ -68,13 +69,8 @@ Twig works in normal template or chunk content:
 </section>
 ```
 
-Twig also works in content returned by snippets:
-
-```php
-return '<div class="card">{{ product_name }}</div>';
-```
-
-And that can still be processed through the addon parser.
+Twig in a snippet's *output* is not compiled — put the Twig in the tpl chunk
+the snippet renders instead.
 
 ## Template Directories
 
@@ -137,13 +133,13 @@ Standalone environments get the same behaviour with:
 ## Error Handling
 
 When a render fails, the error is logged to the MODX error log. What the
-visitor sees depends on `twig.debug`:
+visitor sees depends on `twig.debug` (off by default):
 
-- debug on (default): the original source is returned unrendered, so you can
-  see what failed in place.
-- debug off (production): element renders (chunks, ContentBlocks templates)
-  return an empty string; the document-level pass returns the content with
-  Twig delimiters made inert (`&#123;`) so the page still renders but nothing
+- debug on: the original source is returned unrendered, so you can see what
+  failed in place.
+- debug off (the default, for production): chunk and ContentBlocks renders
+  return an empty string; template renders return the content with Twig
+  delimiters made inert (`&#123;`) so the page keeps its layout but nothing
   executes and no template logic leaks to visitors.
 
 ## Built-in Twig Helpers
@@ -361,12 +357,12 @@ Use this when you want package-level customization at environment startup.
 
 ## Caching And Cache Clearing
 
-Compiled Twig templates are cached under the MODX cache path. When MODX cache is cleared, the addon also clears its compiled Twig cache so changed chunks, templates, and resources do not keep serving stale compiled output.
+Compiled Twig templates are cached under the MODX cache path. Chunk and template sources are compiled from strings and keyed by content hash, so they can never go stale. Only templates loaded from disk can, and those change at deploy time — so the addon's cache-clear plugin empties the compiled Twig cache on `OnSiteRefresh` (the manager's full Clear Cache) and on deploy-style `OnCacheUpdate` firings, recognised by the `scripts` partition in the refresh. The partial refreshes that follow every manager resource save fire `OnCacheUpdate` too, but without `scripts` — the plugin leaves the compiled tree alone then, so editor saves never force a sitewide recompile.
 
-If you change template logic and do not see the update:
+If you change a `.twig` file and do not see the update:
 
-1. Clear MODX cache.
-2. Make sure the addon's cache-clear plugin is installed and enabled.
+1. Run a full Clear Cache from the manager.
+2. Make sure the addon's cache-clear plugin is installed and enabled on `OnSiteRefresh` and `OnCacheUpdate`.
 
 ## ContentBlocks
 
@@ -443,7 +439,7 @@ themselves. It does not compile the document.
 | String templates, standalone environments | yes | `renderString()` / your own `Environment` |
 | Resource content, TV values | **no** | — |
 | Snippet output | **no** | put Twig in the tpl chunks a snippet renders |
-| The assembled document | **no** | unless you enable the document pass |
+| The assembled document | **no** | — |
 
 `tests/SecurityBoundaryTest.php` is the executable version of this table.
 
@@ -476,32 +472,28 @@ values it is not safe and no setting makes it safe — do not route query
 strings, form input or other visitor data through a chunk that Twig then
 renders. Snippet output is never compiled, so that is the safe channel.
 
-## The Document Pass (`twig.document_pass`, default off)
+## Why There Is No Document Pass
 
-The document pass Twig-renders the whole assembled uncacheable document.
-It is **off by default**, and should stay off.
+Earlier versions could Twig-render the whole assembled uncacheable document
+behind a `twig.document_pass` setting. That pass had no provenance at all:
+by the time it ran, template output, snippet output, editor content and
+anything echoed back from the request were one string. The last of those is
+the sharp end: a search page that prints "no results for X" would compile X,
+so a query string like `?q={{ modx.config.site_name }}` was server-side
+template injection reaching the full MODX API — **unauthenticated**, no
+editor trust involved. It was also a footgun with no attacker at all: a
+literal `{{` in a code sample or pasted text broke the page. A Twig sandbox
+is not a fix, because to disarm `{{ modx.runSnippet(…) }}` in a blog post it
+would also have to disarm the element-generated Twig the pass existed to
+serve. The pass and its setting have been removed.
 
-It has no provenance at all. By the time it runs, template output, snippet
-output, editor content and anything echoed back from the request are one
-string. The last of those is the sharp end: a search page that prints "no
-results for X" will compile X, so with this pass on a query string like
-`?q={{ modx.config.site_name }}` is server-side template injection reaching
-the full MODX API — **unauthenticated**, no editor trust involved. It is
-also a footgun with no attacker at all: a literal `{{` in a code sample or
-pasted text breaks the page. A Twig sandbox is not a fix, because to disarm
-`{{ modx.runSnippet(…) }}` in a blog post it would also have to disarm the
-element-generated Twig the pass exists to serve.
-
-### When you still need it
-
-Turn it on with `twig.document_pass` = `1` only for chunk-fetching paths
-element-level rendering does not reach: Alpacka-based extras that
-`getObject(modChunk…)` with their own cache, extras that build inline chunk
-objects (Tagger), and snippets that emit Twig in their own output rather
-than in a tpl chunk.
-
-If you do, audit every place request data is echoed into a page first.
-Prefer moving the Twig into a chunk instead.
+Element-level rendering covers the same ground with provenance intact —
+templates via `modTemplateTwig`, chunks via `modChunkTwig`, ContentBlocks
+templates via `ContentBlocks_BeforeParse`, and pdoTools tpl chunks via the
+subclasses above. For chunk-fetching paths none of those reach (Alpacka-based
+extras with their own chunk cache, extras that build inline chunk objects),
+call `renderString()` on the chunk source yourself; for snippets that emit
+Twig in their own output, move the Twig into a tpl chunk.
 
 ## Practical Guidance
 

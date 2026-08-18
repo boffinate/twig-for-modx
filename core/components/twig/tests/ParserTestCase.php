@@ -219,29 +219,26 @@ abstract class ParserTestCase extends MODxTestCase
     }
 
     /*
-     * Runs the parser over a raw string the way MODX processes the assembled
-     * uncacheable document.
-     *
-     * The document pass is off by default, so it is enabled explicitly here:
-     * tests reaching for this helper are exercising document-level Twig, and
-     * stating that in one place beats every caller silently depending on a
-     * default. Tests for the gate itself use the two helpers below.
+     * Renders a string as element source: Twig first, then the MODX tag pass
+     * over the result — the flow the modChunkTwig/modTemplateTwig proxies
+     * give real elements. Use this to exercise Twig features (helpers,
+     * extensions, error fallbacks) in one call without registering an
+     * element fixture.
      */
     protected function processContent(string $content, int $depth = 10): string
     {
-        return $this->processContentWithDocumentPass($content, true, $depth);
+        $content = (string) $this->twigParser()->renderString($content, []);
+
+        return $this->processDocument($content, $depth);
     }
 
-    protected function processContentWithoutDocumentPass(string $content, int $depth = 10): string
-    {
-        return $this->processContentWithDocumentPass($content, false, $depth);
-    }
-
-    /**
-     * Process content with whatever `twig.document_pass` is configured — used
-     * to cover the shipped default rather than an explicit setting.
+    /*
+     * Runs the parser over a raw string the way MODX processes the assembled
+     * uncacheable document. The document never reaches Twig — elements
+     * resolved during the tag pass still render their own Twig via the
+     * proxies — so this is the helper for asserting what must NOT compile.
      */
-    protected function processContentWithConfiguredDocumentPass(string $content, int $depth = 10): string
+    protected function processDocument(string $content, int $depth = 10): string
     {
         $this->modx->elementCache = [];
         $this->modx->parser->processElementTags('', $content, true, true, '[[', ']]', [], $depth);
@@ -249,21 +246,9 @@ abstract class ParserTestCase extends MODxTestCase
         return $content;
     }
 
-    private function processContentWithDocumentPass(string $content, bool $documentPass, int $depth): string
-    {
-        $previous = $this->modx->getOption('twig.document_pass', null, null);
-        $this->modx->setOption('twig.document_pass', $documentPass);
-
-        try {
-            return $this->processContentWithConfiguredDocumentPass($content, $depth);
-        } finally {
-            $this->modx->setOption('twig.document_pass', $previous);
-        }
-    }
-
     /*
      * Renders a template the way MODX does: the element's own pass, then the
-     * document pass over the result.
+     * MODX tag pass over the result.
      *
      * Instantiates the Twig proxy directly, which is what bootstrap.php
      * makes modResource's Template relation resolve to. Tests that need to

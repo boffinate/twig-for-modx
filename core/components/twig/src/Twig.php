@@ -74,6 +74,42 @@ class Twig extends ParserBase
     }
 
     /**
+     * fromServices() with the failure path handled once for callers that
+     * degrade gracefully: when the service is missing (or resolving it
+     * throws), log a single error per request — repeat calls are silenced
+     * through $optionFlag, an option set on first failure — and return null
+     * so the caller can produce its own fallback output. Callers must still
+     * guard `class_exists(Twig::class)` themselves: when this class is not
+     * autoloadable there is nothing here left to run.
+     */
+    public static function fromServicesOrLogOnce(xPDO $xpdo, string $optionFlag, string $unavailableMessage): ?self
+    {
+        if ($xpdo->getOption($optionFlag, null, false)) {
+            return null;
+        }
+
+        $failure = null;
+        try {
+            $twig = self::fromServices($xpdo);
+        } catch (\Throwable $failure) {
+            $twig = null;
+        }
+
+        if ($twig instanceof self) {
+            return $twig;
+        }
+
+        if ($failure !== null) {
+            $unavailableMessage .= sprintf(' (%s: %s)', $failure::class, $failure->getMessage());
+        }
+
+        $xpdo->log(xPDO::LOG_LEVEL_ERROR, $unavailableMessage);
+        $xpdo->setOption($optionFlag, true);
+
+        return null;
+    }
+
+    /**
      * Install this parser as $modx->parser so that Twig renders first
      * and the parent parser (pdoTools or core) handles MODX tags and
      * Fenom afterwards.
@@ -82,70 +118,6 @@ class Twig extends ParserBase
     {
         $this->modx->parser = $this;
     }
-
-    /**
-     * Process MODX content with Twig template engine
-     *
-     * @param string $parentTag
-     * @param string $content
-     * @param bool $processUncacheable
-     * @param bool $removeUnprocessed
-     * @param string $prefix
-     * @param string $suffix
-     * @param array $tokens
-     * @param int $depth
-     *
-     * @return int
-     */
-    public function processElementTags(
-        $parentTag,
-        & $content,
-        $processUncacheable = false,
-        $removeUnprocessed = false,
-        $prefix = "[[",
-        $suffix = "]]",
-        $tokens = array(),
-        $depth = 0
-    ) {
-        /*
-         * The document pass: Twig-render the whole assembled uncacheable
-         * document. It is OFF by default (`twig.document_pass`), because it
-         * cannot tell where the Twig it compiles came from. By the time this
-         * runs, template output, snippet output, editor content and anything
-         * echoed back from the request are one string. That last one is the
-         * sharp end: a page printing "no results for X" compiles X, so with
-         * this pass on a query string is template injection reaching the modx
-         * object, with no editor trust involved. A sandbox does not help — it
-         * would have to disarm the element-generated Twig this pass exists to
-         * serve.
-         *
-         * Element-level rendering covers the same ground with provenance
-         * intact — templates via the modTemplateTwig proxy, chunks via
-         * modChunkTwig, ContentBlocks templates via ContentBlocks_BeforeParse,
-         * and pdoTools tpl chunks via the subclasses in
-         * Boffinate\Twig\PdoTools. Turn this back on only for chunk-fetching
-         * paths none of those reach; see the README.
-         *
-         * The size guard skips content too large to be a raw template or
-         * chunk: assembled page content (ContentBlocks dump output etc.)
-         * would cause double-rendering or OOM.
-         */
-        if (is_string($content) && $processUncacheable
-            && $this->modx->context->key !== 'mgr'
-            && (bool) $this->modx->getOption('twig.document_pass', null, false)
-            && strlen($content) <= self::MAX_OUTPUT_SIZE
-            && self::containsTwigSyntax($content)) {
-            // Neutralize on error: blanking the assembled document would take
-            // the whole page down; making the delimiters inert keeps the page
-            // rendering without executing or re-parsing the broken Twig.
-            $content = $this->renderString($content, [], self::ERROR_FALLBACK_NEUTRALIZE);
-        }
-
-        return parent::processElementTags($parentTag, $content, $processUncacheable, $removeUnprocessed, $prefix,
-            $suffix, $tokens, $depth
-        );
-    }
-
 
     public function getElement($class, $name)
     {
@@ -163,15 +135,14 @@ class Twig extends ParserBase
 
         $cachePath = self::getCompiledTemplatesPath($this->modx);
         $loader = $this->buildLoader();
-        $debug = (bool) $this->modx->getOption('twig.debug', null, true);
+        $debug = (bool) $this->modx->getOption('twig.debug', null, false);
         /*
          * auto_reload follows debug: in production it costs a filemtime()
          * stat per template per request, to catch edits that only happen at
          * deploy time. Deploy-time invalidation is already covered — the
          * TwigCacheClear plugin calls clearCompiledTemplatesForModx() on
-         * OnSiteRefresh and OnCacheUpdate, so clearing the MODX cache
-         * (manager button, ClearCache processor, cacheManager->refresh())
-         * empties {cache_path}/twig/ with it. Chunk and template sources are
+         * OnSiteRefresh, so the full Clear Cache that ends a deploy empties
+         * {cache_path}/twig/ with it. Chunk and template sources are
          * compiled from strings, not files, so they are keyed by content and
          * cannot go stale in the first place; auto_reload only ever mattered
          * for templates loaded from disk.
@@ -249,7 +220,7 @@ class Twig extends ParserBase
             $e->getRawMessage()
         ));
 
-        if ((bool) $this->modx->getOption('twig.debug', null, true)) {
+        if ((bool) $this->modx->getOption('twig.debug', null, false)) {
             return $content;
         }
 

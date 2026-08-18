@@ -126,11 +126,11 @@ class TwigParserWithoutPdoToolsTest extends ParserTestCase
         $this->assertSame('Broken {{ name ', $this->processContent('Broken {{ name '));
     }
 
-    public function test_snippet_output_with_twig_is_rendered_without_pdotools(): void
+    public function test_snippet_output_twig_stays_uncompiled_without_pdotools(): void
     {
         $this->registerSnippet('TwigTemplateSnippet', 'return "Twig math {{ 3 * 3 }}";');
 
-        $this->assertSame('Twig math 9', $this->processContent('[[TwigTemplateSnippet]]'));
+        $this->assertSame('Twig math {{ 3 * 3 }}', $this->processContent('[[TwigTemplateSnippet]]'));
     }
 
     public function test_custom_extension_works_without_pdotools(): void

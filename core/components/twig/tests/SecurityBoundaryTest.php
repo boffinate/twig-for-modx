@@ -18,12 +18,9 @@ use MODX\Revolution\modResource;
  * The tests below are the evidence for that claim, including the case that
  * motivated it: a query-string parameter echoed back into the page. That is
  * not an editor-trust question at all, because nobody authorised the input;
- * with the document pass on it is unauthenticated server-side template
- * injection reaching the full modx object.
- *
- * Each "unsafe" direction is paired with a test showing what would happen
- * if the boundary moved, so a regression fails loudly rather than quietly
- * widening what compiles.
+ * compiling the assembled document would be unauthenticated server-side
+ * template injection reaching the full modx object — which is why the
+ * one-time "document pass" feature was removed outright rather than gated.
  */
 class SecurityBoundaryTest extends ParserTestCase
 {
@@ -34,14 +31,6 @@ class SecurityBoundaryTest extends ParserTestCase
     protected function usesTwigParser(): bool
     {
         return true;
-    }
-
-    /**
-     * @before
-     */
-    public function ensureShippedDefault(): void
-    {
-        unset($this->modx->config['twig.document_pass']);
     }
 
     /**
@@ -59,7 +48,7 @@ class SecurityBoundaryTest extends ParserTestCase
     }
 
     // ---------------------------------------------------------------
-    // Visitor input — never compiled, under any configuration we ship
+    // Visitor input — never compiled
     // ---------------------------------------------------------------
 
     public function test_query_string_echoed_into_the_page_is_not_compiled(): void
@@ -67,25 +56,10 @@ class SecurityBoundaryTest extends ParserTestCase
         $this->registerQueryEchoSnippet();
         $_GET['twig_probe'] = self::PROBE;
 
-        $output = $this->processContentWithConfiguredDocumentPass('<p>You searched for [[!twigSecurityEcho]]</p>');
+        $output = $this->processDocument('<p>You searched for [[!twigSecurityEcho]]</p>');
 
         $this->assertStringNotContainsString(self::PROBE_RESULT, $output);
         $this->assertStringContainsString(self::PROBE, $output);
-    }
-
-    /*
-     * The same request with the document pass on. This is the vulnerability
-     * the default protects against — if this test ever starts agreeing with
-     * the one above, the gate has stopped working.
-     */
-    public function test_document_pass_would_compile_query_string_input(): void
-    {
-        $this->registerQueryEchoSnippet();
-        $_GET['twig_probe'] = self::PROBE;
-
-        $output = $this->processContent('<p>You searched for [[!twigSecurityEcho]]</p>');
-
-        $this->assertStringContainsString(self::PROBE_RESULT, $output);
     }
 
     /*
@@ -97,7 +71,7 @@ class SecurityBoundaryTest extends ParserTestCase
         $this->registerQueryEchoSnippet();
         $_GET['twig_probe'] = '{{ modx.config.site_name }}';
 
-        $output = $this->processContentWithConfiguredDocumentPass('<p>[[!twigSecurityEcho]]</p>');
+        $output = $this->processDocument('<p>[[!twigSecurityEcho]]</p>');
 
         $this->assertStringNotContainsString((string) $this->modx->getOption('site_name'), $output);
         $this->assertStringContainsString('{{ modx.config.site_name }}', $output);
@@ -109,7 +83,7 @@ class SecurityBoundaryTest extends ParserTestCase
         $this->registerSnippet('twigSecurityMarker', 'return "SNIPPET-RAN";');
         $_GET['twig_probe'] = '{{ snippet("twigSecurityMarker") }}';
 
-        $output = $this->processContentWithConfiguredDocumentPass('<p>[[!twigSecurityEcho]]</p>');
+        $output = $this->processDocument('<p>[[!twigSecurityEcho]]</p>');
 
         $this->assertStringNotContainsString('SNIPPET-RAN', $output);
     }
@@ -150,7 +124,7 @@ class SecurityBoundaryTest extends ParserTestCase
         $this->assignTemplateVarValue($resource, 'twigSecurityTv', self::PROBE);
         $this->modx->resource = $this->modx->getObject(modResource::class, (int) $resource->get('id'));
 
-        $output = $this->processContentWithConfiguredDocumentPass('<p>[[*twigSecurityTv]]</p>');
+        $output = $this->processDocument('<p>[[*twigSecurityTv]]</p>');
 
         $this->assertStringNotContainsString(self::PROBE_RESULT, $output);
         $this->assertStringContainsString(self::PROBE, $output);
@@ -166,7 +140,7 @@ class SecurityBoundaryTest extends ParserTestCase
     {
         $this->registerSnippet('twigSecurityEmitter', 'return "emitted ' . self::PROBE . '";');
 
-        $output = $this->processContentWithConfiguredDocumentPass('<p>[[!twigSecurityEmitter]]</p>');
+        $output = $this->processDocument('<p>[[!twigSecurityEmitter]]</p>');
 
         $this->assertStringNotContainsString(self::PROBE_RESULT, $output);
     }
@@ -179,7 +153,7 @@ class SecurityBoundaryTest extends ParserTestCase
     {
         $this->registerChunk('TwigSecurityChunk', 'Chunk {{ 6 * 7 }}');
 
-        $output = $this->processContentWithConfiguredDocumentPass('[[$TwigSecurityChunk]]');
+        $output = $this->processDocument('[[$TwigSecurityChunk]]');
 
         $this->assertStringContainsString('Chunk 42', $output);
     }
@@ -218,7 +192,7 @@ class SecurityBoundaryTest extends ParserTestCase
         $this->registerChunk('TwigSecuritySeamChunk', '<h1>[[+seam_value]]</h1>');
         $this->modx->setPlaceholder('seam_value', self::PROBE);
 
-        $output = $this->processContentWithConfiguredDocumentPass('[[$TwigSecuritySeamChunk]]');
+        $output = $this->processDocument('[[$TwigSecuritySeamChunk]]');
 
         $this->assertStringContainsString(
             self::PROBE_RESULT,
@@ -262,7 +236,7 @@ class SecurityBoundaryTest extends ParserTestCase
         $this->registerChunk('TwigSecurityBrokenChunk', '{{ secret_internal_note| }}');
 
         try {
-            $output = $this->processContentWithConfiguredDocumentPass('[[$TwigSecurityBrokenChunk]]');
+            $output = $this->processDocument('[[$TwigSecurityBrokenChunk]]');
         } finally {
             $this->modx->setOption('twig.debug', true);
         }
