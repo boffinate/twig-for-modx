@@ -152,6 +152,7 @@ The addon ships with MODX-aware helpers:
 
 - `chunk(name, properties = {})`
 - `snippet(name, properties = {})`
+- `uncached_snippet(name, properties = {})` returns a deferred `[[!...]]` tag for MODX's outer uncacheable pass (NPG vendored extension)
 - `placeholder(name, default = null)`
 - `ph(name, default = null)` as a compatibility alias
 - `option(key, default = null)`
@@ -167,6 +168,7 @@ Examples:
 ```twig
 {{ chunk('HeroCta', {'label': 'Buy now'}) }}
 {{ snippet('SiteNav', {'depth': 2}) }}
+{{ uncached_snippet('addCacheTags', {'tags': '123'}) }}
 {{ placeholder('hero_title', 'Default title') }}
 {{ option('site_name') }}
 {{ trans('setting_site_name', 'en:setting') }}

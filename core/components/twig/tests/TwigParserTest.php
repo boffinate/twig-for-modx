@@ -67,6 +67,16 @@ class TwigParserTest extends ParserTestCase
         );
     }
 
+    public function test_uncached_snippet_helper_defers_execution_to_the_outer_modx_pass(): void
+    {
+        $tag = $this->modx->parser->getRuntime()->uncachedSnippet(
+            'addCacheTags',
+            ['tags' => '123']
+        );
+
+        $this->assertSame('[[!addCacheTags? &tags=`123`]]', $tag);
+    }
+
     public function test_twig_can_access_placeholders_via_globals_and_helper_function(): void
     {
         $this->modx->setPlaceholder('name', 'MODX');

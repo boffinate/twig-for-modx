@@ -23,6 +23,7 @@ class ModxExtension extends AbstractExtension
         return [
             new TwigFunction('chunk', [$this->runtime, 'chunk'], ['is_safe' => ['html']]),
             new TwigFunction('snippet', [$this->runtime, 'snippet'], ['is_safe' => ['html']]),
+            new TwigFunction('uncached_snippet', [$this->runtime, 'uncachedSnippet'], ['is_safe' => ['html']]),
             new TwigFunction('placeholder', [$this->runtime, 'placeholder']),
             new TwigFunction('ph', [$this->runtime, 'placeholder']),
             new TwigFunction('option', [$this->runtime, 'option']),

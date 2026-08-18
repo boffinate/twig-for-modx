@@ -25,6 +25,11 @@ class ModxRuntime
         return $this->processElementTag('', $name, $properties);
     }
 
+    public function uncachedSnippet(string $name, array $properties = []): string
+    {
+        return $this->buildElementTag('!', $name, $properties);
+    }
+
     public function placeholder(string $key, mixed $default = null): mixed
     {
         $value = $this->modx->getPlaceholder($key);
@@ -126,6 +131,16 @@ class ModxRuntime
 
     private function processElementTag(string $token, string $name, array $properties): string
     {
+        $tag = $this->buildElementTag($token, $name, $properties);
+
+        $this->maxIterations ??= (int) $this->modx->getOption('parser_max_iterations', null, 10);
+        $this->parser->processElementTags('', $tag, true, true, '[[', ']]', [], $this->maxIterations);
+
+        return $tag;
+    }
+
+    private function buildElementTag(string $token, string $name, array $properties): string
+    {
         $tag = '[[' . $token . $name;
         if (!empty($properties)) {
             $tag .= '?';
@@ -134,9 +149,6 @@ class ModxRuntime
             }
         }
         $tag .= ']]';
-
-        $this->maxIterations ??= (int) $this->modx->getOption('parser_max_iterations', null, 10);
-        $this->parser->processElementTags('', $tag, true, true, '[[', ']]', [], $this->maxIterations);
 
         return $tag;
     }
