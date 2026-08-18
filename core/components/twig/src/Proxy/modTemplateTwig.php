@@ -15,8 +15,7 @@ use MODX\Revolution\modTemplate;
  * system. Templates are the exception — modResource::process() fetches one
  * with getOne('Template'), an xPDO relation, and modTemplate::process()
  * parses its own content with $processUncacheable = false. Nothing in the
- * parser gets a provenance-clean look at template source, which is why
- * Twig in templates used to depend on the document pass.
+ * parser gets a provenance-clean look at template source.
  *
  * So the interception happens one level down: bootstrap.php points the
  * Template aggregate at this class, and Twig renders in getContent().

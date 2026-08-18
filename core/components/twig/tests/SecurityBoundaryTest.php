@@ -19,8 +19,7 @@ use MODX\Revolution\modResource;
  * motivated it: a query-string parameter echoed back into the page. That is
  * not an editor-trust question at all, because nobody authorised the input;
  * compiling the assembled document would be unauthenticated server-side
- * template injection reaching the full modx object — which is why the
- * one-time "document pass" feature was removed outright rather than gated.
+ * template injection reaching the full modx object.
  */
 class SecurityBoundaryTest extends ParserTestCase
 {
