@@ -35,7 +35,10 @@ class TwigParserWithoutPdoToolsTest extends ParserTestCase
         // snapshots this shared config before setup and restores it after
         // every test.
         if ($this->modx->services->has('pdotools')) {
-            $this->modx->services->get('pdotools')->config(['useFenomParser' => false]);
+            $pdoTools = $this->modx->services->get('pdotools');
+            if ($pdoTools->config('useFenomParser') !== false) {
+                $pdoTools->config(['useFenomParser' => false]);
+            }
         }
     }
 
