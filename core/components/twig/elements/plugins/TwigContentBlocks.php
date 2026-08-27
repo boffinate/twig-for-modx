@@ -35,14 +35,15 @@ if ($twig === null) {
     return;
 }
 if (!is_array($phs)) {
-    $matches = [];
-    $modx->parser->collectElementTags($tpl, $matches);
-    if (!empty($matches)) {
-        /* The tag name carries the '+' placeholder token; the key must not. */
-        $phs = [substr($matches[0][1], 1) => $phs];
-    } else {
-        $phs = ['value' => $phs];
-    }
+    /*
+     * A scalar only ever reaches us as the field's 'value': modParser's
+     * parseProperties() collapses any property that is an array carrying a
+     * 'value' key down to that value before the event fires, so the field's
+     * other settings are already gone by this point and cannot be recovered
+     * here. They remain available to the template as MODX placeholders,
+     * substituted after this Twig pass.
+     */
+    $phs = ['value' => $phs];
 }
 
 $output = (string) $twig->renderString($tpl, $phs);

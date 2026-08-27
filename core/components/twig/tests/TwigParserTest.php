@@ -537,6 +537,26 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame('<a href="https://example.com">Click here</a>', $output);
     }
 
+    /*
+     * MODX's parser hands the field's settings over as a bare scalar whenever
+     * they were an array carrying a 'value' key, so a scalar is always that
+     * value and belongs under that name — not under whatever the template's
+     * first MODX tag happens to be called, which an output modifier makes
+     * wrong anyway.
+     */
+    public function test_contentblocks_plugin_exposes_scalar_phs_as_value(): void
+    {
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '[[+value:nl2br]]<p>{{ value }}</p>',
+                'phs' => 'Hello',
+            ]
+        );
+
+        $this->assertSame('[[+value:nl2br]]<p>Hello</p>', $output);
+    }
+
     public function test_contentblocks_plugin_supports_twig_conditionals_with_empty_value(): void
     {
         $output = $this->executePluginFile(

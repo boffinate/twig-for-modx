@@ -376,6 +376,8 @@ Do not use it when:
 
 - plain ContentBlocks placeholders already solve the problem more simply
 
+A field's placeholders sometimes reach the plugin as a single scalar rather than an array: MODX's parser collapses a property array carrying a `value` key down to that value before it fires the event. The plugin exposes such a scalar to the template as `value`, so `{{ value }}` always works. The field's other settings are gone by then and are not available as Twig variables — use them as MODX placeholders (`[[+alt]]`), which are substituted after the Twig pass.
+
 ## pdoTools Snippets (pdoMenu, pdoResources, ...)
 
 pdoTools-based snippets fetch their tpl chunks through pdoTools' own
