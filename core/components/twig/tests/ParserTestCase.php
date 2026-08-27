@@ -443,7 +443,13 @@ abstract class ParserTestCase extends MODxTestCase
         }, $plugin, $plugin);
 
         $returned = $runner($path, $variables);
-        $output = $event->_output ?? $returned;
+        /*
+         * Read back through $modx->event the way modX::invokeEvent() does: a
+         * nested invokeEvent() inside the plugin (Twig::init() firing
+         * OnTwigInit on the first render of the process) replaces
+         * $modx->event, and the plugin writes to whichever object is current.
+         */
+        $output = $this->modx->event->_output ?? $returned;
         $this->modx->event = $previousEvent;
 
         return $output;

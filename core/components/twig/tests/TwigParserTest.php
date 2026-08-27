@@ -471,6 +471,56 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame('<img src="/images/hero.jpg" alt="Hero Image" class="full-width">', $output);
     }
 
+    /*
+     * ContentBlocks::parse() array_filter()s the event responses and
+     * !empty()-checks the first, so an empty (or "0") answer makes it parse
+     * the raw template itself and the Twig source ends up on the page. A
+     * render that produces nothing — by design or through the production
+     * error fallback — or a bare zero therefore has to come back as
+     * something non-empty that still renders as nothing.
+     */
+    public function test_contentblocks_plugin_answers_non_empty_for_an_empty_render(): void
+    {
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            [
+                'tpl' => '{% if value %}<p>{{ value }}</p>{% endif %}',
+                'phs' => ['value' => ''],
+            ]
+        );
+
+        $this->assertSame(' ', $output);
+    }
+
+    public function test_contentblocks_plugin_answers_non_empty_for_a_zero_render(): void
+    {
+        $output = $this->executePluginFile(
+            MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+            ['tpl' => '{{ value }}', 'phs' => ['value' => '0']]
+        );
+
+        $this->assertSame(' ', $output);
+    }
+
+    public function test_contentblocks_plugin_answers_non_empty_for_a_failed_render_in_production(): void
+    {
+        $this->modx->setOption('twig.debug', false);
+
+        try {
+            $output = $this->executePluginFile(
+                MODX_CORE_PATH . 'components/twig/elements/plugins/TwigContentBlocks.php',
+                [
+                    'tpl' => '<p>{{ value| }}</p>',
+                    'phs' => ['value' => 'x'],
+                ]
+            );
+        } finally {
+            $this->modx->setOption('twig.debug', true);
+        }
+
+        $this->assertSame(' ', $output);
+    }
+
     public function test_contentblocks_plugin_supports_twig_conditionals_on_field_data(): void
     {
         $output = $this->executePluginFile(

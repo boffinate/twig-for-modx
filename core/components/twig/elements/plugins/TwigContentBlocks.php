@@ -43,12 +43,23 @@ if (!is_array($phs)) {
     $matches = [];
     $modx->parser->collectElementTags($tpl, $matches);
     if (!empty($matches)) {
-        // Strip the leading '+' from the placeholder name
+        /* The tag name carries the '+' placeholder token; the key must not. */
         $phs = [substr($matches[0][1], 1) => $phs];
     } else {
         $phs = ['value' => $phs];
     }
 }
 
-$modx->event->_output = $twig->renderString($tpl, $phs);
+$output = (string) $twig->renderString($tpl, $phs);
+
+/*
+ * ContentBlocks::parse() runs array_filter() over the event responses and
+ * then checks !empty() on the first, so both '' and '0' read as "no plugin
+ * answered" and it goes on to parse the raw template — which puts the
+ * unrendered Twig source on the page. A template whose Twig legitimately
+ * renders to nothing ({% if %} around the whole thing), the production error
+ * fallback and a bare zero all hit this, so hand over a single space instead:
+ * it survives both checks and is inert in HTML.
+ */
+$modx->event->_output = $output === '' || $output === '0' ? ' ' : $output;
 return;
