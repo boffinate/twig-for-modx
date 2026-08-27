@@ -9,15 +9,6 @@ declare(strict_types=1);
  * @var array<string, mixed> $phs
  */
 
-if (
-    !str_contains($tpl, '{{')
-    && !str_contains($tpl, '{%')
-    && !str_contains($tpl, '{#')
-    && !str_contains($tpl, '<twig:')
-) {
-    return;
-}
-
 $failureFlag = '__twig_contentblocks_parser_unavailable';
 $message = '[TwigContentBlocks] twigparser service unavailable — CB field templates will render without Twig';
 
@@ -31,6 +22,10 @@ if (!class_exists(\Boffinate\Twig\Twig::class)) {
         $modx->setOption($failureFlag, true);
     }
     $modx->event->_output = $tpl;
+    return;
+}
+
+if (!\Boffinate\Twig\Twig::containsTwigSyntax($tpl)) {
     return;
 }
 
