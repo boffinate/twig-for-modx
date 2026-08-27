@@ -17,6 +17,28 @@ class modChunkTwig extends modChunk
         parent::__construct($twig->modx);
     }
 
+    /*
+     * The parser and modX::getChunk() configure the element before calling
+     * process(): the outer tag that keys the element cache, and whether the
+     * tag was cacheable at all. Both setters are concrete on modElement, so
+     * __call never forwards them, and the wrapped chunk — which does the
+     * processing — would default to cacheable under a tag it rebuilds from
+     * name and properties: [[!$chunk]] and repeated getChunk() calls would
+     * then be served the first output of the request even after the
+     * placeholders they read had changed.
+     */
+    public function setTag($tag)
+    {
+        parent::setTag($tag);
+        $this->wrappedClass->setTag($tag);
+    }
+
+    public function setCacheable($cacheable = true)
+    {
+        parent::setCacheable($cacheable);
+        $this->wrappedClass->setCacheable($cacheable);
+    }
+
     public function process($properties = null, $content = null)
     {
         $response = $this->wrappedClass->process($properties, $content);

@@ -283,6 +283,40 @@ class TwigParserTest extends ParserTestCase
         $this->assertSame('Hi modx MODX', $output);
     }
 
+    /*
+     * The chunk proxy must hand the parser's tag and cacheable flag on to
+     * the chunk it wraps. Left at their defaults, the wrapped chunk caches
+     * its first output under a tag it rebuilds from name and properties, and
+     * every later uncached call in the request gets that output back rather
+     * than one rendered against the current placeholders.
+     */
+    public function test_uncached_chunk_tag_rerenders_when_placeholders_change(): void
+    {
+        $this->registerChunk('UncachedPlaceholderChunk', 'Hi [[+subject]]');
+        $this->modx->elementCache = [];
+
+        $this->modx->setPlaceholder('subject', 'first');
+        $first = '[[!$UncachedPlaceholderChunk]]';
+        $this->modx->parser->processElementTags('', $first, true, true, '[[', ']]', [], 10);
+        $this->modx->setPlaceholder('subject', 'second');
+        $second = '[[!$UncachedPlaceholderChunk]]';
+        $this->modx->parser->processElementTags('', $second, true, true, '[[', ']]', [], 10);
+
+        $this->assertSame(['Hi first', 'Hi second'], [$first, $second]);
+    }
+
+    public function test_get_chunk_rerenders_when_placeholders_change(): void
+    {
+        $this->registerChunk('GetChunkPlaceholderChunk', 'Hi [[+subject]]');
+
+        $this->modx->setPlaceholder('subject', 'first');
+        $first = $this->modx->getChunk('GetChunkPlaceholderChunk');
+        $this->modx->setPlaceholder('subject', 'second');
+        $second = $this->modx->getChunk('GetChunkPlaceholderChunk');
+
+        $this->assertSame(['Hi first', 'Hi second'], [$first, $second]);
+    }
+
     public function test_twig_can_call_modx_snippet(): void
     {
         $this->registerSnippet('TwiggedSnippet', 'return "Snippet output";');
